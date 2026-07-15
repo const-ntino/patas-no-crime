@@ -1,0 +1,69 @@
+name: Export godot build
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  GODOT_VERSION: "4.7"
+
+jobs:
+  export:
+    name: Export (${{ matrix.preset }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - preset: "Windows Desktop"
+            output_dir: builds/windows
+            output_file: patas-no-crime.exe
+            artifact_name: patas-no-crime-windows
+          - preset: "Linux"
+            output_dir: builds/linux
+            output_file: patas-no-crime.x86_64
+            artifact_name: patas-no-crime-linux
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache dos templates de exportação
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/godot/export_templates
+          key: godot-export-templates-${{ env.GODOT_VERSION }}
+
+      - name: Baixar o Godot headless
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip
+          sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+
+      - name: Baixar e instalar os templates de exportação
+        run: |
+          TEMPLATES_DIR=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          if [ ! -d "$TEMPLATES_DIR" ]; then
+            wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O templates.tpz
+            mkdir -p "$TEMPLATES_DIR"
+            unzip -q templates.tpz -d /tmp/templates_extract
+            mv /tmp/templates_extract/templates/* "$TEMPLATES_DIR/"
+          fi
+
+      - name: Criar pasta de saída
+        run: mkdir -p ${{ matrix.output_dir }}
+
+      - name: Exportar (${{ matrix.preset }})
+        run: |
+          godot --headless --export-release "${{ matrix.preset }}" "${{ matrix.output_dir }}/${{ matrix.output_file }}"
+
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.output_dir }}/
+          retention-days: 30
