@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://dvg33wibkt1y0"]
+
+[ext_resource type="Script" uid="uid://dx7c3yaijk41h" path="res://scripts/characters/character_stats.gd" id="1_5j2xn"]
+
+[resource]
+script = ExtResource("1_5j2xn")
+display_name = "Guaxinim"
+move_speed = 3.0
+metadata/_custom_type_script = "uid://dx7c3yaijk41h"

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://duxmdnml7p6pq"]
+
+[ext_resource type="Script" uid="uid://dx7c3yaijk41h" path="res://scripts/characters/character_stats.gd" id="1_7u6he"]
+
+[resource]
+script = ExtResource("1_7u6he")
+display_name = "Pássaro"
+move_speed = 4.5
+metadata/_custom_type_script = "uid://dx7c3yaijk41h"

@@ -9,7 +9,7 @@ class_name PlayerInput
 @export var move_direction: Vector2 = Vector2.ZERO
 @export var is_sneaking: bool = false
 
-@onready var camera_rig: Node3D = $"../CameraRig"
+@onready var camera_rig: Node3D = $"../VisualRoot/CameraRig"
 
 
 func _process(_delta: float) -> void:
