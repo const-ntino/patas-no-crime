@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://c62c0dgabtlly"]
+
+[ext_resource type="Script" uid="uid://bg8ebmtv6hu8l" path="res://scripts/characters/character_body.gd" id="1_1bdar"]
+[ext_resource type="Script" uid="uid://dlbolpelg7htg" path="res://scripts/characters/player_input.gd" id="2_e22cc"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_73up6"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_epf0w"]
+albedo_color = Color(1, 0, 0.6666667, 1)
+metallic = 1.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_srqwv"]
+material = SubResource("StandardMaterial3D_epf0w")
+radius = 0.4
+height = 1.8
+
+[node name="Character" type="CharacterBody3D" unique_id=1670055009]
+script = ExtResource("1_1bdar")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1635050640]
+shape = SubResource("CapsuleShape3D_73up6")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=607580686]
+mesh = SubResource("CapsuleMesh_srqwv")
+
+[node name="PlayerInput" type="Node" parent="." unique_id=716560915]
+script = ExtResource("2_e22cc")
+metadata/_custom_type_script = "uid://dlbolpelg7htg"
+
+[node name="CameraFixed" type="Camera3D" parent="." unique_id=744996153]
+transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.34202012, 0, -0.34202012, 0.9396926, 0, 2.5, 4)
+current = true

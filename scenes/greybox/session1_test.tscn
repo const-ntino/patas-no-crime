@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://cf2qojuj3f6qy"]
+
+[ext_resource type="PackedScene" uid="uid://c62c0dgabtlly" path="res://scenes/characters/character.tscn" id="1_s3b4e"]
+
+[sub_resource type="Environment" id="Environment_73up6"]
+
+[node name="Session1Test" type="Node3D" unique_id=1864715574]
+
+[node name="Ground" type="CSGBox3D" parent="." unique_id=298448821]
+use_collision = true
+size = Vector3(20, 0.2, 20)
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=1669142028]
+transform = Transform3D(1, 0, 0, 0, 0.9986295, -0.05233596, 0, 0.05233596, 0.9986295, 2.0945487, 0.8, 5.336238)
+use_collision = true
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=2111506949]
+transform = Transform3D(1, 0, 0, 0, 0.9986295, -0.05233596, 0, 0.05233596, 0.9986295, -3.79818, 0.8, 1.9438605)
+use_collision = true
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=719212576]
+transform = Transform3D(1, 0, 0, 0, 0.9986295, -0.05233596, 0, 0.05233596, 0.9986295, 5.1370025, 0.8, -1.0439386)
+use_collision = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1164615165]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1013011227]
+environment = SubResource("Environment_73up6")
+
+[node name="Character" parent="." unique_id=1670055009 instance=ExtResource("1_s3b4e")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
