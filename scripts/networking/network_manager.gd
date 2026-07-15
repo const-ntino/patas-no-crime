@@ -1,12 +1,9 @@
 extends Node
 
-## Gerencia a sessão multiplayer: cria o servidor ENet. Único lugar do
-## projeto que sabe qual transporte está em uso (ENet agora, GodotSteam
-## a partir de M2). Nada de gameplay deve depender de ENet diretamente.
-##
-## Sessão 1: só cria servidor, mesmo rodando sozinho ("servidor de 1").
-## A lógica de conectar como cliente entra na sessão 2, junto com o
-## MultiplayerSpawner.
+## Gerencia apenas o TRANSPORTE da sessão multiplayer: cria o peer ENet
+## como servidor ou cliente. Não sabe nada sobre personagens, spawn ou
+## gameplay — essa separação é o que torna a troca de ENet por
+## GodotSteam em M2 uma mudança só neste arquivo.
 
 const PORT: int = 8910
 const MAX_PLAYERS: int = 4
@@ -15,7 +12,10 @@ var is_server: bool = false
 
 
 func _ready() -> void:
-	create_server()
+	if "--server" in OS.get_cmdline_args():
+		create_server()
+	else:
+		create_client()
 
 
 func create_server() -> void:
@@ -27,3 +27,14 @@ func create_server() -> void:
 	multiplayer.multiplayer_peer = peer
 	is_server = true
 	print("NetworkManager: servidor criado na porta %d" % PORT)
+
+
+func create_client() -> void:
+	var peer := ENetMultiplayerPeer.new()
+	var error: Error = peer.create_client("127.0.0.1", PORT)
+	if error != OK:
+		push_error("Falha ao criar cliente ENet: %s" % error)
+		return
+	multiplayer.multiplayer_peer = peer
+	is_server = false
+	print("NetworkManager: conectando como cliente em 127.0.0.1:%d" % PORT)

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cf2qojuj3f6qy"]
 
-[ext_resource type="PackedScene" uid="uid://c62c0dgabtlly" path="res://scenes/characters/character.tscn" id="1_s3b4e"]
+[ext_resource type="Script" uid="uid://c6bdotm7wv88q" path="res://scripts/networking/game_manager.gd" id="1_s3b4e"]
+[ext_resource type="PackedScene" uid="uid://bhxcx4domeoit" path="res://scenes/ui/debug_overlay.tscn" id="2_djd4k"]
 
 [sub_resource type="Environment" id="Environment_73up6"]
 
@@ -27,5 +28,12 @@ use_collision = true
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1013011227]
 environment = SubResource("Environment_73up6")
 
-[node name="Character" parent="." unique_id=1670055009 instance=ExtResource("1_s3b4e")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+[node name="Players" type="Node3D" parent="." unique_id=500307407]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=711139110]
+spawn_path = NodePath("../Players")
+
+[node name="GameManager" type="Node" parent="." unique_id=254643897]
+script = ExtResource("1_s3b4e")
+
+[node name="DebugOverlay" parent="." unique_id=1727402230 instance=ExtResource("2_djd4k")]

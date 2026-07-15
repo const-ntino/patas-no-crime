@@ -13,6 +13,16 @@ const GRAVITY: float = 9.8
 
 @onready var player_input: PlayerInput = $PlayerInput
 @onready var mesh_instance: MeshInstance3D = $MeshInstance3D
+@onready var camera: Camera3D = $CameraFixed
+
+
+func _ready() -> void:
+	# Cada instância do jogo tem uma cópia de TODOS os personagens (pra
+	# poder ver os outros jogadores), mas só deve ATIVAR a câmera do
+	# personagem que é seu próprio — senão a câmera ativa vira uma
+	# loteria de "qual Camera3D entrou primeiro na árvore".
+	var is_local_player: bool = player_input.get_multiplayer_authority() == multiplayer.get_unique_id()
+	camera.current = is_local_player
 
 
 func _physics_process(delta: float) -> void:
