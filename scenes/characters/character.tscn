@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bg8ebmtv6hu8l" path="res://scripts/characters/character_body.gd" id="1_1bdar"]
 [ext_resource type="Script" uid="uid://dlbolpelg7htg" path="res://scripts/characters/player_input.gd" id="2_e22cc"]
+[ext_resource type="Script" uid="uid://bvly7gg4mi28j" path="res://scripts/characters/camera_rig.gd" id="3_e22cc"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_73up6"]
 radius = 0.4
@@ -32,7 +33,11 @@ properties/1/path = NodePath("MeshInstance3D:rotation")
 properties/1/spawn = true
 properties/1/replication_mode = 1
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_73up6"]
+radius = 0.3
+
 [node name="Character" type="CharacterBody3D" unique_id=1670055009]
+collision_layer = 2
 script = ExtResource("1_1bdar")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1635050640]
@@ -48,9 +53,18 @@ metadata/_custom_type_script = "uid://dlbolpelg7htg"
 [node name="InputSync" type="MultiplayerSynchronizer" parent="PlayerInput" unique_id=656298173]
 replication_config = SubResource("SceneReplicationConfig_1bdar")
 
-[node name="CameraFixed" type="Camera3D" parent="." unique_id=744996153]
-transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.34202012, 0, -0.34202012, 0.9396926, 0, 2.5, 4)
-current = true
-
 [node name="TransformSync" type="MultiplayerSynchronizer" parent="." unique_id=1571446521]
 replication_config = SubResource("SceneReplicationConfig_e22cc")
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=1786461463]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("3_e22cc")
+
+[node name="CameraPitch" type="Node3D" parent="CameraRig" unique_id=1769409426]
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig/CameraPitch" unique_id=1180658445]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 0)
+shape = SubResource("SphereShape3D_73up6")
+spring_length = 4.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/CameraPitch/SpringArm3D" unique_id=976143080]

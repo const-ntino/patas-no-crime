@@ -67,6 +67,9 @@ func _spawn_character(peer_id: int) -> Node:
 	character.position = SPAWN_POINTS[index % SPAWN_POINTS.size()]
 
 	character.set_multiplayer_authority(1)
+	
+	var camera_rig: Node = character.get_node("CameraRig")
+	camera_rig.set_multiplayer_authority(peer_id)
 
 	var player_input: Node = character.get_node("PlayerInput")
 	player_input.set_multiplayer_authority(peer_id)

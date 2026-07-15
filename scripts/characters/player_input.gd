@@ -2,19 +2,14 @@ extends Node
 class_name PlayerInput
 
 ## Único lugar do projeto, junto com o rig de câmera, autorizado a ler
-## Input.*. Traduz teclado em intenção: um Vector2 no plano XZ do mundo.
-##
-## Importante: este nó é replicado em todo peer (MultiplayerSpawner
-## instancia a cena do personagem em todo mundo, pra todo mundo poder
-## ver todo mundo). Sem o guard de autoridade abaixo, CADA réplica leria
-## o teclado LOCAL de cada máquina, e a réplica do personagem do cliente
-## rodando na tela do host leria o teclado do host — fazendo todo mundo
-## se mover junto. Só a instância que pertence de fato ao peer dono
-## deve gerar intenção nova; as demais só recebem o valor via
-## MultiplayerSynchronizer (InputSync) e mantêm esse valor sem reescrevê-lo.
+## Input.*. Traduz teclado em intenção: um Vector2 no plano XZ do mundo,
+## já composto relativo à orientação (yaw) da câmera local. O host
+## recebe essa direção pronta e nunca sabe que câmera existe.
 
-var move_direction: Vector2 = Vector2.ZERO
-var is_sneaking: bool = false
+@export var move_direction: Vector2 = Vector2.ZERO
+@export var is_sneaking: bool = false
+
+@onready var camera_rig: Node3D = $"../CameraRig"
 
 
 func _process(_delta: float) -> void:
@@ -24,6 +19,18 @@ func _process(_delta: float) -> void:
 	var input_vector := Vector2.ZERO
 	input_vector.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
 	input_vector.y = Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
+	if input_vector.length() > 1.0:
+		input_vector = input_vector.normalized()
 
-	move_direction = input_vector.normalized() if input_vector.length() > 1.0 else input_vector
+	var cam_forward: Vector3 = camera_rig.global_transform.basis.z
+	cam_forward.y = 0.0
+	cam_forward = cam_forward.normalized()
+
+	var cam_right: Vector3 = -camera_rig.global_transform.basis.x
+	cam_right.y = 0.0
+	cam_right = cam_right.normalized()
+
+	var world_direction: Vector3 = cam_right * input_vector.x + cam_forward * -input_vector.y
+
+	move_direction = Vector2(world_direction.x, world_direction.z)
 	is_sneaking = Input.is_action_pressed("sneak")
