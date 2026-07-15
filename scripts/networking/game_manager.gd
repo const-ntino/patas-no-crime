@@ -1,12 +1,23 @@
 extends Node
 
+## Decide QUANDO e ONDE spawnar o personagem de cada peer conectado, e
+## fixa a autoridade de cada parte da cena de personagem. Vive na cena
+## de jogo, não é autoload — cenas diferentes (lobby, fase) podem
+## spawnar de formas diferentes.
+##
+## Regra de autoridade (RM-02, RM-03): o CORPO (CharacterBody3D) é
+## sempre autoridade do host (id 1), porque é o host quem simula todo
+## mundo. Só o PlayerInput e o CameraRig, dentro de cada personagem,
+## têm autoridade do peer dono.
+
 const CharacterScene := preload("res://scenes/characters/character.tscn")
 
+## Pontos de spawn na toca (Casa da Rua 7, GDD 6.2), sob a varanda.
 const SPAWN_POINTS: Array[Vector3] = [
-	Vector3(8, 1, 8),
-	Vector3(10, 1, 8),
-	Vector3(-2, 1, 0),
-	Vector3(0, 1, 2),
+	Vector3(1.3, 1, -1),
+	Vector3(2.7, 1, -1),
+	Vector3(1.3, 1, -0.3),
+	Vector3(2.7, 1, -0.3),
 ]
 
 const PLAYER_COLORS: Array[Color] = [
@@ -33,7 +44,7 @@ func _ready() -> void:
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	_spawn_for_peer(1)
+	_spawn_for_peer(1)  # o próprio host também tem um personagem
 
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -50,6 +61,8 @@ func _spawn_for_peer(peer_id: int) -> void:
 	spawner.spawn(peer_id)
 
 
+## Chamada em TODOS os peers (host e clientes) com o mesmo peer_id,
+## garantindo que a fiação de autoridade fique idêntica dos dois lados.
 func _spawn_character(peer_id: int) -> Node:
 	var character := CharacterScene.instantiate()
 	character.name = str(peer_id)
