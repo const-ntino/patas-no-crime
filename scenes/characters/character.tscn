@@ -16,6 +16,9 @@ properties/0/replication_mode = 1
 properties/1/path = NodePath(".:is_sneaking")
 properties/1/spawn = true
 properties/1/replication_mode = 1
+properties/2/path = NodePath(".:vertical_direction")
+properties/2/spawn = true
+properties/2/replication_mode = 1
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_e22cc"]
 properties/0/path = NodePath(".:position")
@@ -36,6 +39,9 @@ metallic = 1.0
 material = SubResource("StandardMaterial3D_epf0w")
 radius = 0.4
 height = 1.8
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_srqwv"]
+radius = 0.8
 
 [node name="Character" type="CharacterBody3D" unique_id=1670055009]
 collision_layer = 2
@@ -75,3 +81,10 @@ spring_length = 4.0
 mesh = SubResource("CapsuleMesh_srqwv")
 
 [node name="FacingSync" type="Node3D" parent="." unique_id=60867998]
+
+[node name="InteractionArea" type="Area3D" parent="." unique_id=1506450623]
+collision_layer = 0
+collision_mask = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionArea" unique_id=231751514]
+shape = SubResource("SphereShape3D_srqwv")

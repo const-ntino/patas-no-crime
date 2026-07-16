@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://4tuj55gocnec"]
+
+[ext_resource type="Script" uid="uid://d2552dhp3fiwq" path="res://scripts/interactables/door.gd" id="1_door"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_interact"]
+size = Vector3(1.4, 2.2, 1.2)
+
+[node name="Door" type="Node3D" unique_id=1383162872 groups=["interactable"]]
+script = ExtResource("1_door")
+
+[node name="Pivot" type="Node3D" parent="." unique_id=883676857]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+
+[node name="Leaf" type="CSGBox3D" parent="Pivot" unique_id=1746925887]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.1, 0)
+use_collision = true
+size = Vector3(1, 2.2, 0.08)
+
+[node name="InteractZone" type="Area3D" parent="." unique_id=951340723]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractZone" unique_id=1310040563]
+shape = SubResource("BoxShape3D_interact")

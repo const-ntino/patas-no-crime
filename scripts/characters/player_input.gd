@@ -1,15 +1,13 @@
 extends Node
 class_name PlayerInput
 
-## Único lugar do projeto, junto com o rig de câmera, autorizado a ler
-## Input.*. Traduz teclado em intenção: um Vector2 no plano XZ do mundo,
-## já composto relativo à orientação (yaw) da câmera local. O host
-## recebe essa direção pronta e nunca sabe que câmera existe.
-
 @export var move_direction: Vector2 = Vector2.ZERO
 @export var is_sneaking: bool = false
+@export var vertical_direction: float = 0.0
 
 @onready var camera_rig: Node3D = $"../VisualRoot/CameraRig"
+@onready var interaction_area: Area3D = $"../InteractionArea"
+@onready var character: Node3D = $".."
 
 
 func _process(_delta: float) -> void:
@@ -34,3 +32,24 @@ func _process(_delta: float) -> void:
 
 	move_direction = Vector2(world_direction.x, world_direction.z)
 	is_sneaking = Input.is_action_pressed("sneak")
+
+	vertical_direction = Input.get_action_strength("fly_up") - Input.get_action_strength("fly_down")
+
+	if Input.is_action_just_pressed("interact"):
+		_try_interact()
+
+func _try_interact() -> void:
+	var bodies := interaction_area.get_overlapping_areas()
+	var closest: Node = null
+	var closest_dist: float = INF
+	for area in bodies:
+		var parent := area.get_parent()
+		if not parent.is_in_group("interactable"):
+			continue
+		var dist: float = area.global_position.distance_to(character.global_position)
+		if dist < closest_dist:
+			closest_dist = dist
+			closest = parent
+
+	if closest and closest.has_method("request_toggle"):
+		closest.request_toggle(character)

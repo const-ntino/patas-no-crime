@@ -11,7 +11,7 @@ extends Node3D
 ## copiamos direto, sem lerp, pra não introduzir atraso onde não existe
 ## problema.
 
-@export var interpolation_speed: float = 15.0
+@export var interpolation_speed: float = 8.0
 
 @onready var logical_body: Node3D = get_parent()
 @onready var facing_sync: Node3D = logical_body.get_node("FacingSync")
