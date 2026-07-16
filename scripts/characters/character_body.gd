@@ -1,9 +1,20 @@
 extends CharacterBody3D
 
+## Corpo do personagem: SEMPRE autoridade do host (RM-02). held_item e
+## dragging_item são setados pelos RPCs do item (rodam em todos os
+## peers). Arrastar desacelera o personagem (GDD 4.1: "movimento lento
+## contínuo") — o item segue um pouco mais rápido que isso, então os
+## dois andam juntos.
+
 @export var stats: CharacterStats
+var held_item: Item = null
+var dragging_item: Item = null
 
 const GRAVITY: float = 9.8
 const FLY_SPEED: float = 3.0
+## Velocidade máxima enquanto arrasta um Fixo-arrastável (segurando Q).
+## Ligeiramente ABAIXO do DRAG_SPEED do item, pra ele acompanhar.
+const DRAG_MOVE_SPEED: float = 1.2
 
 @onready var player_input: PlayerInput = $PlayerInput
 @onready var facing_sync: Node3D = $FacingSync
@@ -23,6 +34,10 @@ func _physics_process(delta: float) -> void:
 	var speed: float = stats.move_speed
 	if player_input.is_sneaking:
 		speed *= stats.sneak_speed_multiplier
+	if held_item:
+		speed *= held_item.speed_multiplier
+	if dragging_item and player_input.is_dragging:
+		speed = minf(speed, DRAG_MOVE_SPEED)
 
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed

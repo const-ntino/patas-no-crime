@@ -70,3 +70,19 @@ material simples ajudou bastante a diagnosticar problemas de
 navegação na sessão 5. Vale considerar formalizar como convenção de
 greybox permanente (não só um recurso emergencial), ou até um plugin
 simples de editor que aplica isso automaticamente por altura.
+
+## Spawn inicial sempre via call_deferred (lição M1 sessão 2)
+
+_ready() dos nós irmãos roda na ordem em que aparecem na árvore de
+cena. Um GameManager que tenta spawnar algo num spawner que vem DEPOIS
+dele na árvore falha ou, pior, "funciona" incompletamente: o host cria
+o nó localmente (via add_child) mas o spawner nunca chega a rastreá-lo
+a tempo, então nunca replica pro cliente — sem erro nenhum, silencioso.
+O spawner de personagens do M0 só funcionou por coincidência de ordem
+(vinha antes do GameManager); o de itens não teve a mesma sorte.
+
+Regra adotada: todo spawn inicial de qualquer sistema futuro
+(objetivos, pets, etc.) deve rodar dentro de uma função chamada via
+`.call_deferred()`, nunca direto no corpo do `_ready()` — isso garante
+que toda a cena terminou a própria inicialização antes de qualquer
+spawn acontecer, independente de como os nós foram ordenados no editor.

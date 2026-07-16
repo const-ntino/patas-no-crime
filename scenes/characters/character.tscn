@@ -19,6 +19,9 @@ properties/1/replication_mode = 1
 properties/2/path = NodePath(".:vertical_direction")
 properties/2/spawn = true
 properties/2/replication_mode = 1
+properties/3/path = NodePath(".:is_dragging")
+properties/3/spawn = true
+properties/3/replication_mode = 1
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_e22cc"]
 properties/0/path = NodePath(".:position")
@@ -80,11 +83,14 @@ spring_length = 4.0
 [node name="MeshInstance3D" type="MeshInstance3D" parent="VisualRoot" unique_id=607580686]
 mesh = SubResource("CapsuleMesh_srqwv")
 
-[node name="FacingSync" type="Node3D" parent="." unique_id=60867998]
-
 [node name="InteractionArea" type="Area3D" parent="." unique_id=1506450623]
 collision_layer = 0
 collision_mask = 4
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionArea" unique_id=231751514]
 shape = SubResource("SphereShape3D_srqwv")
+
+[node name="FacingSync" type="Node3D" parent="." unique_id=60867998]
+
+[node name="HoldPoint" type="Node3D" parent="." unique_id=611859608]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.4)

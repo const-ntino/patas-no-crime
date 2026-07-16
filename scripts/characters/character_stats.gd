@@ -12,3 +12,8 @@ extends Resource
 ## checagem por nome espalhada pelos scripts de gameplay.
 @export var can_manipulate: bool = false  # guaxinim: abrir porta/janela/gaveta
 @export var can_fly: bool = false          # pássaro: mobilidade vertical livre
+@export var can_drag: bool = false         # guaxinim: verbo Arrastar (Fixo-arrastável)
+
+## Classe máxima de item que este animal consegue carregar (GDD 4.1).
+## Leve = 0, Médio = 1, Pesado = 2 — comparação ordinal contra Item.Class.
+@export_enum("Leve", "Médio", "Pesado") var max_carry_class: int = 0

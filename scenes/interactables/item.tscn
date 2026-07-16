@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://cwukjjf8ti6ea"]
+
+[ext_resource type="Script" uid="uid://c6unp0uupu6gi" path="res://scripts/interactables/item.gd" id="1_item"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_visual"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pickup"]
+size = Vector3(0.9, 0.9, 0.9)
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_y5q0j"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath(".:item_class")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+
+[node name="Item" type="RigidBody3D" unique_id=1583408181 groups=["interactable"]]
+collision_layer = 16
+script = ExtResource("1_item")
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=2062047261]
+mesh = SubResource("BoxMesh_visual")
+
+[node name="BodyShape" type="CollisionShape3D" parent="." unique_id=424899156]
+shape = SubResource("BoxShape3D_body")
+
+[node name="InteractZone" type="Area3D" parent="." unique_id=1848856211]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractZone" unique_id=1526518189]
+shape = SubResource("BoxShape3D_pickup")
+
+[node name="ItemSync" type="MultiplayerSynchronizer" parent="." unique_id=428290607]
+replication_config = SubResource("SceneReplicationConfig_y5q0j")

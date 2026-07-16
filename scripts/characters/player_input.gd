@@ -1,9 +1,16 @@
 extends Node
 class_name PlayerInput
 
+## Único lugar do projeto, junto com o rig de câmera, autorizado a ler
+## Input.*. Traduz teclado em intenção: direção no plano XZ do mundo
+## (já composta relativa à câmera), eixo vertical de voo, furtivo, drag,
+## e dispara interação (E). Todas as variáveis @export que o host
+## precisa enxergar TÊM que estar na lista de replicação do InputSync.
+
 @export var move_direction: Vector2 = Vector2.ZERO
 @export var is_sneaking: bool = false
 @export var vertical_direction: float = 0.0
+@export var is_dragging: bool = false
 
 @onready var camera_rig: Node3D = $"../VisualRoot/CameraRig"
 @onready var interaction_area: Area3D = $"../InteractionArea"
@@ -32,17 +39,18 @@ func _process(_delta: float) -> void:
 
 	move_direction = Vector2(world_direction.x, world_direction.z)
 	is_sneaking = Input.is_action_pressed("sneak")
-
 	vertical_direction = Input.get_action_strength("fly_up") - Input.get_action_strength("fly_down")
+	is_dragging = Input.is_action_pressed("verb")
 
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 
+
 func _try_interact() -> void:
-	var bodies := interaction_area.get_overlapping_areas()
+	var areas := interaction_area.get_overlapping_areas()
 	var closest: Node = null
 	var closest_dist: float = INF
-	for area in bodies:
+	for area in areas:
 		var parent := area.get_parent()
 		if not parent.is_in_group("interactable"):
 			continue
@@ -51,5 +59,5 @@ func _try_interact() -> void:
 			closest_dist = dist
 			closest = parent
 
-	if closest and closest.has_method("request_toggle"):
-		closest.request_toggle(character)
+	if closest and closest.has_method("interact"):
+		closest.interact(character)

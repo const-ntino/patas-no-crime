@@ -7,4 +7,6 @@ script = ExtResource("1_5j2xn")
 display_name = "Guaxinim"
 move_speed = 3.0
 can_manipulate = true
+can_drag = true
+max_carry_class = 2
 metadata/_custom_type_script = "uid://dx7c3yaijk41h"
