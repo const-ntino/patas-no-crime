@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="patas no crime"
-run/main_scene="res://scenes/greybox/teste_verbos.tscn"
+run/main_scene="uid://yjt4t7v2s4cc"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
