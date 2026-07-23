@@ -43,8 +43,8 @@ reordenar sem perguntar). Progresso:
 | — | Correção de câmera (fora do plano original, ver seção 6) | concluída |
 | 3 | Rotina do humano (GDD 5.3, RF-02 parte 1) | concluída |
 | 4 | Scouting e marcação (GDD 5.2, RF-02 parte 2, HUD 8.1 parcial) | concluída |
-| 5 | Estados de alerta (GDD 5.4, RF-03) | próxima |
-| 6 | Ruído (GDD 5.5) | não iniciada |
+| 5 | Estados de alerta (GDD 5.4, RF-03) | concluída |
+| 6 | Ruído (GDD 5.5) | próxima |
 | 7 | Chamar do pássaro (GDD 3.2, RF-09) | não iniciada |
 | 8 | Pets (GDD 5.6) | não iniciada |
 | 9 | Captura e resgate (GDD 5.7, RF-04) | não iniciada |
@@ -395,17 +395,18 @@ aprendendo através deste projeto de propósito. Implicações:
 
 ## 10. Próximo passo concreto
 
-Sessão 5 do M1: estados de alerta (GDD 5.4, RF-03) — máquina
-Calmo/Desconfiado/Caos por humano, cone de visão. É o primeiro
-consumidor real de `HidingSpot.is_character_inside()` (sessão 4,
-ainda não usado por ninguém) e do que falta do HUD 8.1 (ícone de
-estado ?/! sobre humanos, que a sessão 4 deixou de fora por não haver
-estado nenhum pra mostrar ainda).
+Sessão 6 do M1: Ruído (GDD 5.5) — três raios de emissão (passos
+correndo, objeto Pesado em movimento, objeto derrubado/colisão),
+disparando Desconfiado no ponto de origem. É o gatilho de Desconfiado
+que a sessão 5 deixou de fora por não existir nenhum evento de ruído
+no projeto ainda — `HumanNPC._enter_desconfiado(ponto)` já existe e
+está pronto pra ser chamado por um evento de ruído, não precisa mudar
+nada na máquina de estados em si, só emitir o evento.
 
-Sistema de scouting (sessão 4) entrega, mas com HUD 8.1 parcial: sem
-timer de partida nem ícones dos 3 objetivos cinza→colorido (dependem
-de vitória/derrota da sessão 11 e dos objetivos formais da sessão 10)
-e sem ícone de estado (?/!) sobre NPC (depende desta sessão 5).
+HUD 8.1 segue parcial: sem timer de partida nem ícones dos 3
+objetivos cinza→colorido (dependem de vitória/derrota da sessão 11 e
+dos objetivos formais da sessão 10). Ícone de estado (?/!) já entrou
+na sessão 5.
 
 ## 11. Configuração de autonomia (`.claude/settings.json`)
 

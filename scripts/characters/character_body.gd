@@ -10,6 +10,12 @@ extends CharacterBody3D
 var held_item: Item = null
 var dragging_item: Item = null
 
+## Placeholder de captura (GDD 5.4/5.7, sessão 5): sinalizado só pelo
+## host, que é sempre quem processa movimento (RM-02) — não precisa de
+## RPC pra "congelar" ter efeito, a posição parada já replica sozinha
+## via TransformSync. Sem gaiola/resgate ainda (sessão 9 troca isso).
+var is_captured: bool = false
+
 const GRAVITY: float = 9.8
 const FLY_SPEED: float = 3.0
 ## Velocidade máxima enquanto arrasta um Fixo-arrastável (segurando Q).
@@ -28,6 +34,14 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
+		return
+
+	if is_captured:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if not is_on_floor():
+			velocity.y -= GRAVITY * delta
+		move_and_slide()
 		return
 
 	var direction := Vector3(player_input.move_direction.x, 0.0, player_input.move_direction.y)

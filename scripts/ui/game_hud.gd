@@ -19,6 +19,8 @@ const PLAYER_OUTLINE_COLOR := Color(1, 1, 1, 0.9)
 const MARK_ICON_COLOR := Color(1, 0.85, 0.2, 1)
 const ROUTINE_LINE_COLOR := Color(1, 0.85, 0.2, 0.7)
 const COUNTDOWN_COLOR := Color(1, 1, 1, 1)
+const ALERT_ICON_COLOR := Color(1, 0.9, 0.1, 1)
+const CAOS_ICON_COLOR := Color(1, 0.2, 0.2, 1)
 
 @onready var players: Node3D = $"../../Players"
 @onready var humans: Node3D = $"../../Humans"
@@ -42,6 +44,7 @@ func _draw() -> void:
 
 	_draw_companion_outlines()
 	_draw_marked_targets()
+	_draw_human_alert_icons()
 
 
 func _draw_companion_outlines() -> void:
@@ -72,6 +75,12 @@ func _draw_marked_targets() -> void:
 
 
 func _draw_human_extras(human: HumanNPC, head_point: Vector2) -> void:
+	# Linha de rotina e relógio só fazem sentido em Calmo — Desconfiado
+	# e Caos têm o próprio ícone (ver _draw_human_alert_icons), e o
+	# humano nem está seguindo a rotina nesses estados.
+	if human.alert_state != HumanNPC.AlertState.CALMO:
+		return
+
 	# Linha de rotina: liga os pontos em loop (sofá->cozinha->banheiro->
 	# quarto->sofá). Precisa de routine_points replicado (RoutineSync).
 	var points: Array[Vector3] = human.routine_points
@@ -89,6 +98,23 @@ func _draw_human_extras(human: HumanNPC, head_point: Vector2) -> void:
 	if human.state == HumanNPC.State.WAITING:
 		var seconds_left: int = int(ceil(human.wait_timer))
 		draw_string(ThemeDB.fallback_font, head_point + Vector2(-10, -20), "%ds" % seconds_left, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, COUNTDOWN_COLOR)
+
+
+## Ícone de estado (?, !) sobre QUALQUER humano em Desconfiado/Caos —
+## GDD 8.1 não condiciona isso a estar marcado, diferente do ícone de
+## marcação (que existe pra dar informação através de parede).
+func _draw_human_alert_icons() -> void:
+	for human in humans.get_children():
+		if human.name == "HumanSpawner" or not human is HumanNPC:
+			continue
+		if human.alert_state == HumanNPC.AlertState.CALMO:
+			continue
+		var point: Vector2 = _project(human.global_position + Vector3(0, 1.3, 0))
+		if point == Vector2.INF:
+			continue
+		var label: String = "?" if human.alert_state == HumanNPC.AlertState.DESCONFIADO else "!"
+		var color: Color = ALERT_ICON_COLOR if human.alert_state == HumanNPC.AlertState.DESCONFIADO else CAOS_ICON_COLOR
+		draw_string(ThemeDB.fallback_font, point + Vector2(-4, -24), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, color)
 
 
 ## Retorna Vector2.INF se o ponto está atrás da câmera (não faz sentido
