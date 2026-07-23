@@ -45,6 +45,24 @@ const CHASE_RANGE: float = 14.0
 const CATCH_DISTANCE: float = 1.0
 const CONE_BOOST: float = 1.25
 const HUMAN_PROXIMITY_ALERT: float = 2.0
+## Alcance em que uma perseguição termina acordando cachorros
+## dormindo por perto (GDD 5.4/5.6, sessão 8 — antes era no-op porque
+## pets não existiam ainda).
+const PET_WAKE_RANGE: float = 10.0
+
+## Raios de ruído (GDD 5.5). Passos respeita is_sneaking (furtivo =
+## raio zero, GDD 5.1); item Pesado/Fixo-arrastável em movimento não
+## (não dá pra carregar algo pesado na ponta dos pés). Sem raycast —
+## som atravessa parede, diferente da visão (decisão #2 da sessão 6).
+const NOISE_RANGE_STEPS: float = 3.0
+const NOISE_RANGE_HEAVY: float = 5.0
+const NOISE_MOVE_THRESHOLD: float = 0.1
+
+## Chamar do pássaro (GDD 3.2, RF-09, sessão 7): curiosidade, não
+## alerta — não usa AlertState nem mostra ?/! (diferente de
+## Desconfiado). Mais curta que a investigação de Desconfiado (8s)
+## porque é só curiosidade, não suspeita real.
+const CURIOSITY_TIME: float = 5.0
 
 var routine_points: Array[Vector3] = []
 var current_target_index: int = 0
@@ -70,9 +88,20 @@ var _chase_los_lost_timer: float = 0.0
 var _alert_move_direction: Vector3 = Vector3.ZERO
 var _alert_last_next_point: Vector3 = Vector3.INF
 
+var is_curious: bool = false
+var _curiosity_point: Vector3 = Vector3.ZERO
+var _curiosity_timer: float = 0.0
+var _curiosity_arrived: bool = false
+
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var facing_sync: Node3D = $FacingSync
 @onready var players: Node3D = $"../../Players"
+
+
+func _ready() -> void:
+	# Grupo em código, não groups=[...] no .tscn (lição k) — item.gd usa
+	# isso pra achar humanos sem precisar de referência direta (sessão 6).
+	add_to_group("human_npc")
 
 
 ## Chamado pelo GameManager (host) ANTES do add_child — mesma ordem já
@@ -95,11 +124,14 @@ func _physics_process(delta: float) -> void:
 
 	match alert_state:
 		AlertState.CALMO:
-			match state:
-				State.WAITING:
-					_process_waiting(delta)
-				State.WALKING:
-					_process_walking()
+			if is_curious:
+				_process_curiosity(delta)
+			else:
+				match state:
+					State.WAITING:
+						_process_waiting(delta)
+					State.WALKING:
+						_process_walking()
 			_scan_and_react(delta)
 		AlertState.DESCONFIADO:
 			_process_desconfiado(delta)
@@ -176,6 +208,9 @@ func _scan_and_react(delta: float) -> void:
 	var sighting: Dictionary = _detect_best_sighting(RANGE_CALMO, ANGLE_CALMO)
 	if sighting.is_empty():
 		_sight_timer = 0.0
+		var noise_origin: Vector3 = _detect_noise()
+		if noise_origin != Vector3.INF:
+			_enter_desconfiado(noise_origin)
 		return
 
 	if sighting["carrying"]:
@@ -248,6 +283,92 @@ func _has_line_of_sight(space_state: PhysicsDirectSpaceState3D, target_pos: Vect
 
 
 # ---------------------------------------------------------------------------
+# Ruído (GDD 5.5, sessão 6)
+# ---------------------------------------------------------------------------
+
+## Passos (furtivo zera, GDD 5.1) e item Pesado/Fixo-arrastável em
+## movimento (ignora furtivo). Sem raycast — som atravessa parede
+## (decisão #2). Retorna a posição da fonte mais próxima ou Vector3.INF.
+func _detect_noise() -> Vector3:
+	var closest: Vector3 = Vector3.INF
+	var closest_dist: float = INF
+	for player in players.get_children():
+		if not player is CharacterBody3D:
+			continue
+		if "is_captured" in player and player.is_captured:
+			continue
+
+		var carrying_heavy: bool = false
+		if "held_item" in player and player.held_item and player.held_item.item_class == Item.Class.PESADO:
+			carrying_heavy = true
+		if "dragging_item" in player and player.dragging_item != null:
+			carrying_heavy = true
+
+		var moving: bool = Vector2(player.velocity.x, player.velocity.z).length() > NOISE_MOVE_THRESHOLD
+		var is_sneaking: bool = "player_input" in player and player.player_input and player.player_input.is_sneaking
+
+		var noise_range: float = 0.0
+		if carrying_heavy and moving:
+			noise_range = NOISE_RANGE_HEAVY
+		elif moving and not is_sneaking:
+			noise_range = NOISE_RANGE_STEPS
+
+		if noise_range <= 0.0:
+			continue
+
+		var dist: float = global_position.distance_to(player.global_position)
+		if dist <= noise_range and dist < closest_dist:
+			closest_dist = dist
+			closest = player.global_position
+
+	return closest
+
+
+## Chamado de fora (item.gd, no impacto) — mesma entrada que qualquer
+## outro gatilho de Desconfiado, só que empurrada em vez de detectada
+## no próprio scan (evento único, não condição contínua).
+func notify_noise(origin: Vector3, noise_range: float) -> void:
+	if alert_state == AlertState.CAOS:
+		return  # já no nível máximo de alerta, ignora (GDD 5.4)
+	if global_position.distance_to(origin) > noise_range:
+		return
+	_enter_desconfiado(origin)
+
+
+# ---------------------------------------------------------------------------
+# Curiosidade (GDD 3.2, RF-09, sessão 7 — Chamar do pássaro)
+# ---------------------------------------------------------------------------
+
+## Chamado de fora (character_body.gd, quando o pássaro usa Chamar).
+## Só CALMO responde (GDD 3.2: "humano em Desconfiado ignora" — Caos
+## também ignora aqui, já ocupado com algo mais sério).
+func investigate_curiosity(point: Vector3) -> void:
+	if alert_state != AlertState.CALMO:
+		return
+	is_curious = true
+	_curiosity_point = point
+	_curiosity_timer = CURIOSITY_TIME
+	_curiosity_arrived = false
+	_alert_last_next_point = Vector3.INF
+	_alert_move_direction = Vector3.ZERO
+
+
+func _process_curiosity(delta: float) -> void:
+	if not _curiosity_arrived:
+		var arrived: bool = _move_toward(_curiosity_point, MOVE_SPEED)
+		if arrived:
+			_curiosity_arrived = true
+			velocity.x = 0.0
+			velocity.z = 0.0
+	else:
+		_curiosity_timer -= delta
+		if _curiosity_timer <= 0.0:
+			is_curious = false
+			_last_next_point = Vector3.INF
+			_move_direction = Vector3.ZERO
+
+
+# ---------------------------------------------------------------------------
 # Desconfiado (GDD 5.4)
 # ---------------------------------------------------------------------------
 
@@ -276,12 +397,20 @@ func _process_desconfiado(delta: float) -> void:
 	# Novo estímulo durante a investigação redireciona (GDD 5.3: "novo
 	# estímulo durante investigação redireciona").
 	var sighting: Dictionary = _detect_best_sighting(RANGE_DESCONFIADO, ANGLE_DESCONFIADO)
-	if sighting.is_empty():
+	if not sighting.is_empty():
+		if sighting["carrying"] or sighting["central"]:
+			_enter_caos(sighting["player"])
+			return
+		_redirect_investigation(sighting["player"].global_position)
 		return
-	if sighting["carrying"] or sighting["central"]:
-		_enter_caos(sighting["player"])
-		return
-	_investigate_point = sighting["player"].global_position
+
+	var noise_origin: Vector3 = _detect_noise()
+	if noise_origin != Vector3.INF:
+		_redirect_investigation(noise_origin)
+
+
+func _redirect_investigation(new_point: Vector3) -> void:
+	_investigate_point = new_point
 	_investigate_timer = INVESTIGATE_TIME
 	_investigate_arrived = false
 	_alert_last_next_point = Vector3.INF
@@ -337,20 +466,44 @@ func _process_caos(delta: float) -> void:
 	_move_toward(_chase_target.global_position, CHASE_SPEED)
 
 	if global_position.distance_to(_chase_target.global_position) <= CATCH_DISTANCE:
-		if "is_captured" in _chase_target:
-			_chase_target.is_captured = true
+		_capture(_chase_target)
 		_end_chase()
+
+
+## GDD 5.7 (sessão 9): solta o que o animal carregava NO PONTO DE
+## CAPTURA (antes de teleportar — a ordem importa) e manda pra gaiola.
+## Sem gaiola na cena (não deveria acontecer no MVP), cai de volta no
+## placeholder da sessão 5 (só trava no lugar) em vez de quebrar.
+func _capture(target: CharacterBody3D) -> void:
+	if "held_item" in target and target.held_item:
+		target.held_item._apply_release.rpc()
+	if "dragging_item" in target and target.dragging_item:
+		target.dragging_item._apply_release.rpc()
+
+	var cage: Node = get_tree().get_first_node_in_group("cage")
+	if cage:
+		cage.capture(target)
+	else:
+		target.is_captured = true
 
 
 func _end_chase() -> void:
 	cone_multiplier *= CONE_BOOST
 	_chase_target = null
+	_wake_nearby_dogs()
 	_exit_alert_to_routine()
+
+
+func _wake_nearby_dogs() -> void:
+	for dog in get_tree().get_nodes_in_group("dog_npc"):
+		if global_position.distance_to(dog.global_position) <= PET_WAKE_RANGE:
+			dog.wake()
 
 
 func _exit_alert_to_routine() -> void:
 	alert_state = AlertState.CALMO
 	_sight_timer = 0.0
+	is_curious = false  # um alerta de verdade cancela curiosidade pendente
 	velocity.x = 0.0
 	velocity.z = 0.0
 	# Retoma a rotina em direção ao ponto que já era o destino atual —

@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/interactables/cage.gd" id="1_cage"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_zone"]
+size = Vector3(1.5, 1.0, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_visual"]
+size = Vector3(1.5, 1.0, 1.2)
+
+[node name="Cage" type="Area3D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_cage")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_zone")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_visual")

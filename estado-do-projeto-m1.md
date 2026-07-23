@@ -44,11 +44,11 @@ reordenar sem perguntar). Progresso:
 | 3 | Rotina do humano (GDD 5.3, RF-02 parte 1) | concluída |
 | 4 | Scouting e marcação (GDD 5.2, RF-02 parte 2, HUD 8.1 parcial) | concluída |
 | 5 | Estados de alerta (GDD 5.4, RF-03) | concluída |
-| 6 | Ruído (GDD 5.5) | próxima |
-| 7 | Chamar do pássaro (GDD 3.2, RF-09) | não iniciada |
-| 8 | Pets (GDD 5.6) | não iniciada |
-| 9 | Captura e resgate (GDD 5.7, RF-04) | não iniciada |
-| 10 | Os 3 objetivos da fase MVP (GDD 6.3) — revisitar proporções do greybox aqui | não iniciada |
+| 6 | Ruído (GDD 5.5) | concluída |
+| 7 | Chamar do pássaro (GDD 3.2, RF-09) | concluída |
+| 8 | Pets (GDD 5.6) | concluída |
+| 9 | Captura e resgate (GDD 5.7, RF-04) | concluída |
+| 10 | Os 3 objetivos da fase MVP (GDD 6.3) — revisitar proporções do greybox aqui | próxima (precisa de você — ver seção 10) |
 | 11 | Vitória, derrota, pontuação, HUD (RF-07, GDD 7.1, HUD 8.1 completo) | não iniciada |
 
 Gate de saída do M1: **G1** (PRD seção 8) — 3 sessões de playtest,
@@ -253,6 +253,15 @@ da folha, no vão). Vale genericamente pra qualquer alvo marcável cuja
 colisão real não seja um ponto (portas, mas potencialmente também
 itens grandes no futuro).
 
+**p) `RigidBody3D.linear_velocity` já vem ZERADA (ou quase) dentro do
+próprio handler de `body_entered`.** A física resolve a resposta da
+colisão antes de emitir o sinal, então medir "velocidade de impacto"
+lendo `linear_velocity` no handler sempre dá ~0, mesmo numa queda de
+3m. Correção: guardar a velocidade no início do `_physics_process` do
+frame ANTERIOR (`_last_velocity`) e comparar essa contra o limiar
+dentro do handler — usado pro ruído de impacto de item (GDD 5.5,
+sessão 6).
+
 ## 6. Sobre a correção de câmera (fora do plano original)
 
 Depois da sessão 2 do M1, o usuário reportou que a câmera do cliente
@@ -395,18 +404,30 @@ aprendendo através deste projeto de propósito. Implicações:
 
 ## 10. Próximo passo concreto
 
-Sessão 6 do M1: Ruído (GDD 5.5) — três raios de emissão (passos
-correndo, objeto Pesado em movimento, objeto derrubado/colisão),
-disparando Desconfiado no ponto de origem. É o gatilho de Desconfiado
-que a sessão 5 deixou de fora por não existir nenhum evento de ruído
-no projeto ainda — `HumanNPC._enter_desconfiado(ponto)` já existe e
-está pronto pra ser chamado por um evento de ruído, não precisa mudar
-nada na máquina de estados em si, só emitir o evento.
+Sessões 7, 8 e 9 do M1 foram concluídas em bloco (bateria autônoma via
+CLI, sem playtest ao vivo intermediário — teste ao vivo ainda
+pendente, ver abaixo): Chamar do pássaro, Pets (cachorro) e Captura e
+resgate. Todas validadas via `godot --headless` (spawns simulados,
+estados forçados, distâncias/tempos conferidos), mas **nenhuma delas
+foi testada ao vivo com duas instâncias ainda** — isso é o primeiro
+passo antes de continuar, não pule pra sessão 10 sem confirmar essas
+três primeiro.
+
+**Sessão 10 (os 3 objetivos + revisitar proporções do greybox) NÃO foi
+iniciada de propósito — precisa de você presente.** Duas razões:
+1. Ela explicitamente inclui "revisitar proporções do greybox", e
+   numa conversa anterior você pediu pra aumentar o ambiente inteiro
+   (escada, pé-direito, cômodos) em vez de só a colisão pontual da
+   rampa — combinamos de deixar essa decisão de escopo/dimensões pra
+   quando a sessão 10 chegasse, com você por perto.
+2. É a sessão de maior risco geométrico do M1 inteiro (mexe em
+   paredes/lajes/escada que já existem e funcionam) — não é o tipo de
+   coisa pra fazer sem poder testar ao vivo em seguida.
 
 HUD 8.1 segue parcial: sem timer de partida nem ícones dos 3
 objetivos cinza→colorido (dependem de vitória/derrota da sessão 11 e
-dos objetivos formais da sessão 10). Ícone de estado (?/!) já entrou
-na sessão 5.
+dos objetivos formais da sessão 10). Ícone de estado (?/!) entrou na
+sessão 5.
 
 ## 11. Configuração de autonomia (`.claude/settings.json`)
 

@@ -45,6 +45,13 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("interact"):
 		_try_interact()
 
+	# Chamar (GDD 3.2, RF-09): mesma tecla de verbo exclusivo (Q) que o
+	# guaxinim usa pra Arrastar (segurar), mas o pássaro dispara num
+	# toque só — os dois nunca colidem porque cada um só tem efeito na
+	# capacidade certa (can_drag / can_call).
+	if Input.is_action_just_pressed("verb") and character.stats and character.stats.can_call:
+		character.request_call()
+
 
 func _try_interact() -> void:
 	var areas := interaction_area.get_overlapping_areas()

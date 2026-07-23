@@ -17,6 +17,7 @@ extends Node
 const CharacterScene := preload("res://scenes/characters/character.tscn")
 const ItemScene := preload("res://scenes/interactables/item.tscn")
 const HumanScene := preload("res://scenes/characters/human_npc.tscn")
+const DogScene := preload("res://scenes/characters/dog_npc.tscn")
 
 const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(1.3, 1, -1),
@@ -58,11 +59,26 @@ const HUMAN_ROUTE: Array[Vector3] = [
 	Vector3(11.5, 3.8, 4.5),   # quarto (andar superior)
 ]
 
+## Cachorro (GDD 5.6, sessão 8): dorme na sala (GDD 6.2), patrulha 2
+## pontos no térreo — mesmo espírito de estimativa da HUMAN_ROUTE,
+## deliberadamente longe do vão da escada (x 6.2-10.6, z<1.6).
+const DOG_SLEEP_POINT: Vector3 = Vector3(8.0, 1.0, 6.5)
+const DOG_PATROL_POINTS: Array[Vector3] = [
+	Vector3(6.0, 1.0, 3.0),
+	Vector3(10.0, 1.0, 3.0),
+]
+
+## Item de comida de teste (GDD 5.6: suborno de cachorro) — perto do
+## ponto de sono do cachorro, pra dar pra testar sem precisar carregar
+## de longe.
+const FOOD_ITEM_POS: Vector3 = Vector3(7.0, 1.0, 5.5)
+
 @onready var spawner: MultiplayerSpawner = $"../MultiplayerSpawner"
 @onready var players: Node3D = $"../Players"
 @onready var item_spawner: MultiplayerSpawner = $"../Items/ItemSpawner"
 @onready var items: Node3D = $"../Items"
 @onready var humans: Node3D = $"../Humans"
+@onready var dogs: Node3D = $"../Dogs"
 @onready var nav_region: NavigationRegion3D = $"../NavigationRegion3D"
 
 var match_seed: int = 0
@@ -99,7 +115,9 @@ func _server_start() -> void:
 
 	_spawn_for_peer(1)  # o próprio host também tem um personagem
 	_spawn_test_items()
+	_spawn_food_item()
 	_spawn_human()
+	_spawn_dog()
 
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -166,3 +184,24 @@ func _spawn_human() -> void:
 	human.set_multiplayer_authority(1)
 	human.setup(HUMAN_ROUTE, match_seed)  # ANTES do add_child (mesmo padrão de item.gd)
 	humans.add_child(human)
+
+
+## Item de comida de teste (suborno de cachorro, GDD 5.6). Mesmo
+## padrão de _spawn_test_items(): setup() antes do add_child.
+func _spawn_food_item() -> void:
+	var item := ItemScene.instantiate()
+	item.name = "food_0"
+	item.position = FOOD_ITEM_POS
+	item.setup(Item.Class.LEVE)
+	item.is_food = true
+	items.add_child(item)
+
+
+## Só o host cria o cachorro. Autoridade sempre do host (RM-03), mesmo
+## padrão de _spawn_human().
+func _spawn_dog() -> void:
+	var dog := DogScene.instantiate()
+	dog.name = "dog_0"
+	dog.set_multiplayer_authority(1)
+	dog.setup(DOG_PATROL_POINTS, DOG_SLEEP_POINT)  # ANTES do add_child
+	dogs.add_child(dog)

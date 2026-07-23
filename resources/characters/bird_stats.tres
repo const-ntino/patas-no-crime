@@ -7,4 +7,5 @@ script = ExtResource("1_7u6he")
 display_name = "Pássaro"
 move_speed = 4.5
 can_fly = true
+can_call = true
 metadata/_custom_type_script = "uid://dx7c3yaijk41h"

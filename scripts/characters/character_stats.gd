@@ -13,6 +13,7 @@ extends Resource
 @export var can_manipulate: bool = false  # guaxinim: abrir porta/janela/gaveta
 @export var can_fly: bool = false          # pássaro: mobilidade vertical livre
 @export var can_drag: bool = false         # guaxinim: verbo Arrastar (Fixo-arrastável)
+@export var can_call: bool = false         # pássaro: verbo Chamar (GDD 3.2, RF-09)
 
 ## Classe máxima de item que este animal consegue carregar (GDD 4.1).
 ## Leve = 0, Médio = 1, Pesado = 2 — comparação ordinal contra Item.Class.

@@ -16,11 +16,24 @@ var dragging_item: Item = null
 ## via TransformSync. Sem gaiola/resgate ainda (sessão 9 troca isso).
 var is_captured: bool = false
 
+## Acuado pelo cachorro (GDD 5.6, sessão 8) — mesmo efeito de
+## movimento que is_captured, mas reversível: o cachorro solta assim
+## que o animal sai do raio de detecção (`DogNPC._unpin`), diferente
+## da captura (permanente até o resgate da sessão 9).
+var is_pinned: bool = false
+
+## Chamar (GDD 3.2, RF-09, sessão 7): cooldown contado só no host, que
+## é sempre quem valida e processa o pedido (mesma razão de is_captured
+## não precisar de RPC pra decrementar — só importa aqui).
+var call_cooldown_remaining: float = 0.0
+
 const GRAVITY: float = 9.8
 const FLY_SPEED: float = 3.0
 ## Velocidade máxima enquanto arrasta um Fixo-arrastável (segurando Q).
 ## Ligeiramente ABAIXO do DRAG_SPEED do item, pra ele acompanhar.
 const DRAG_MOVE_SPEED: float = 1.2
+const CALL_COOLDOWN: float = 20.0
+const CALL_RANGE: float = 15.0
 
 @onready var player_input: PlayerInput = $PlayerInput
 @onready var facing_sync: Node3D = $FacingSync
@@ -36,7 +49,10 @@ func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
 
-	if is_captured:
+	if call_cooldown_remaining > 0.0:
+		call_cooldown_remaining -= delta
+
+	if is_captured or is_pinned:
 		velocity.x = 0.0
 		velocity.z = 0.0
 		if not is_on_floor():
@@ -67,3 +83,40 @@ func _physics_process(delta: float) -> void:
 		facing_sync.look_at(facing_sync.global_position + horizontal_direction, Vector3.UP)
 
 	move_and_slide()
+
+
+## Chamado por player_input.gd (local) quando Q é apertado por um
+## personagem com can_call. Igual ao fluxo de interact() do item/porta:
+## pede ao host, que valida e aplica.
+func request_call() -> void:
+	_request_call_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "call_local")
+func _request_call_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	if not stats or not stats.can_call:
+		return
+	if call_cooldown_remaining > 0.0:
+		return
+	call_cooldown_remaining = CALL_COOLDOWN
+	_attract_nearest_human()
+
+
+## Só o host roda isso (RM-03: toda IA só no host) — chamado depois da
+## validação de cooldown acima, que só passa no host mesmo. Atrai só o
+## humano CALMO mais próximo (GDD 3.2: "humano em Desconfiado ignora";
+## Caos também ignora aqui, já está ocupado com algo mais sério).
+func _attract_nearest_human() -> void:
+	var nearest: Node = null
+	var nearest_dist: float = CALL_RANGE
+	for human in get_tree().get_nodes_in_group("human_npc"):
+		if human.alert_state != HumanNPC.AlertState.CALMO:
+			continue
+		var dist: float = global_position.distance_to(human.global_position)
+		if dist <= nearest_dist:
+			nearest_dist = dist
+			nearest = human
+	if nearest:
+		nearest.investigate_curiosity(global_position)

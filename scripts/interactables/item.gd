@@ -10,6 +10,9 @@ enum Class { LEVE, MEDIO, PESADO, FIXO_ARRASTAVEL }
 
 @export var item_class: Class = Class.LEVE
 @export var speed_multiplier: float = 1.0
+## Suborno de cachorro (GDD 5.6, sessão 8): largar um item com essa
+## flag perto de um cachorro acordado o ocupa por um tempo.
+@export var is_food: bool = false
 
 ## Velocidade com que o item Fixo-arrastável segue o personagem. Um
 ## pouco ACIMA da velocidade do personagem arrastando (ver
@@ -18,8 +21,21 @@ const DRAG_SPEED: float = 1.5
 ## Distância em que o item para de se aproximar (não entra na cápsula).
 const DRAG_STOP_DISTANCE: float = 0.6
 
+## Ruído de impacto (GDD 5.5, RF-10 recortado só pra itens — sessão 6).
+## Limiar evita disparar em pousos suaves; cooldown evita rajada
+## enquanto o item quica no chão.
+const IMPACT_NOISE_RANGE: float = 8.0
+const IMPACT_NOISE_MIN_SPEED: float = 2.0
+const IMPACT_NOISE_COOLDOWN: float = 1.0
+
 var held_by: Node = null
 var _applied_class: int = -1
+var _impact_noise_cooldown: float = 0.0
+## linear_velocity JÁ vem zerada quando o sinal body_entered dispara (a
+## física resolve a colisão antes de emitir o sinal) — guardamos a
+## velocidade do início do frame anterior pra medir o impacto de
+## verdade (achado via CLI headless, sessão 6).
+var _last_velocity: Vector3 = Vector3.ZERO
 
 @onready var mesh: MeshInstance3D = $Mesh
 
@@ -45,6 +61,25 @@ func _ready() -> void:
 	if not is_multiplayer_authority():
 		var sync := $ItemSync as MultiplayerSynchronizer
 		sync.synchronized.connect(_refresh_visual)
+		return
+
+	# Ruído de impacto (GDD 5.5, sessão 6): só o host processa — cada
+	# peer roda física local do RigidBody3D, mas só a simulação do host
+	# é autoritativa (RM-02); processar dos dois lados duplicaria/
+	# dessincronizaria o ruído.
+	contact_monitor = true
+	max_contacts_reported = 4
+	body_entered.connect(_on_body_entered)
+
+
+func _on_body_entered(_body: Node) -> void:
+	if _impact_noise_cooldown > 0.0:
+		return
+	if _last_velocity.length() < IMPACT_NOISE_MIN_SPEED:
+		return
+	_impact_noise_cooldown = IMPACT_NOISE_COOLDOWN
+	for human in get_tree().get_nodes_in_group("human_npc"):
+		human.notify_noise(global_position, IMPACT_NOISE_RANGE)
 
 
 func _refresh_visual() -> void:
@@ -62,6 +97,11 @@ func _refresh_visual() -> void:
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
 		return
+
+	if _impact_noise_cooldown > 0.0:
+		_impact_noise_cooldown -= delta
+	_last_velocity = linear_velocity
+
 	if held_by == null:
 		return
 
