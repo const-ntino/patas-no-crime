@@ -16,6 +16,7 @@ extends Node
 
 const CharacterScene := preload("res://scenes/characters/character.tscn")
 const ItemScene := preload("res://scenes/interactables/item.tscn")
+const HumanScene := preload("res://scenes/characters/human_npc.tscn")
 
 const SPAWN_POINTS: Array[Vector3] = [
 	Vector3(1.3, 1, -1),
@@ -45,10 +46,26 @@ const TEST_ITEMS := [
 	{ "pos": Vector3(5, 1, 2), "class": 3 },
 ]
 
+## Rotina do humano da Casa da Rua 7 (GDD 6.2): sofá, cozinha, banheiro,
+## quarto, nessa ordem, em loop. Coordenadas são minha mel+hor estimativa
+## a partir da geometria das paredes (sessão 3, M1) — o caminho ENTRE os
+## pontos é resolvido pela malha de navegação (NavigationAgent3D), só a
+## posição de cada ponto pode precisar de ajuste visual depois de testar.
+const HUMAN_ROUTE: Array[Vector3] = [
+	Vector3(4.5, 1.0, 6.5),    # sofá (sala, térreo)
+	Vector3(12.5, 1.0, 6.5),   # cozinha (balcão, térreo)
+	Vector3(1.5, 3.8, 6.5),    # banheiro (andar superior)
+	Vector3(11.5, 3.8, 4.5),   # quarto (andar superior)
+]
+
 @onready var spawner: MultiplayerSpawner = $"../MultiplayerSpawner"
 @onready var players: Node3D = $"../Players"
-@onready var item_spawner: MultiplayerSpawner = $"../ItemSpawner"
+@onready var item_spawner: MultiplayerSpawner = $"../Items/ItemSpawner"
 @onready var items: Node3D = $"../Items"
+@onready var humans: Node3D = $"../Humans"
+@onready var nav_region: NavigationRegion3D = $"../NavigationRegion3D"
+
+var match_seed: int = 0
 
 
 func _ready() -> void:
@@ -67,8 +84,22 @@ func _ready() -> void:
 
 
 func _server_start() -> void:
+	match_seed = randi()
+	print("Seed da partida: %d" % match_seed)
+
+	# A NavigationRegion3D precisa de vários frames de física depois de
+	# entrar na árvore pra terminar de se registrar no NavigationServer
+	# (achado empírico via CLI headless, sessão 3 do M1: assar cedo
+	# demais produz uma malha com vértices "corretos" na aparência, mas
+	# que falha silenciosamente em toda consulta de caminho). 1 frame
+	# (o que call_deferred já dá de graça) não é suficiente.
+	for i in 10:
+		await get_tree().physics_frame
+	nav_region.bake_navigation_mesh(false)  # síncrono: precisa terminar antes do humano andar
+
 	_spawn_for_peer(1)  # o próprio host também tem um personagem
 	_spawn_test_items()
+	_spawn_human()
 
 
 func _on_peer_connected(peer_id: int) -> void:
@@ -122,3 +153,16 @@ func _spawn_test_items() -> void:
 		item.position = data["pos"]
 		item.setup(data["class"])
 		items.add_child(item)
+
+
+## Só o host cria o humano. Autoridade sempre do host (RM-03: toda IA
+## roda só no host) — não precisa set_multiplayer_authority explícito
+## porque 1 já é a autoridade padrão de qualquer nó, mas fica explícito
+## aqui pra seguir o mesmo padrão de fiação de autoridade do resto do
+## arquivo.
+func _spawn_human() -> void:
+	var human := HumanScene.instantiate()
+	human.name = "human_0"
+	human.set_multiplayer_authority(1)
+	human.setup(HUMAN_ROUTE, match_seed)  # ANTES do add_child (mesmo padrão de item.gd)
+	humans.add_child(human)

@@ -1,0 +1,48 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/human_npc.gd" id="1_human"]
+[ext_resource type="Script" path="res://scripts/characters/visual_interpolation.gd" id="2_visual"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_human"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_human"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+properties/1/path = NodePath("FacingSync:rotation")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_human"]
+albedo_color = Color(0.6, 0.55, 0.5, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_human"]
+material = SubResource("StandardMaterial3D_human")
+radius = 0.4
+height = 1.8
+
+[node name="HumanNPC" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_human")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_human")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 1.0
+target_desired_distance = 1.0
+
+[node name="TransformSync" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.067
+replication_config = SubResource("SceneReplicationConfig_human")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+script = ExtResource("2_visual")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="VisualRoot"]
+mesh = SubResource("CapsuleMesh_human")
+
+[node name="FacingSync" type="Node3D" parent="."]

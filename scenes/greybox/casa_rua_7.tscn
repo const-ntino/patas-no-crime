@@ -23,9 +23,24 @@ ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.5
 
+[sub_resource type="NavigationMesh" id="NavigationMesh_house"]
+geometry_parsed_geometry_type = 1
+geometry_source_geometry_mode = 1
+geometry_source_group_name = &"nav_source"
+geometry_collision_mask = 1
+cell_size = 0.1
+cell_height = 0.1
+agent_radius = 0.4
+agent_height = 1.8
+agent_max_climb = 0.3
+agent_max_slope = 55.0
+
 [node name="CasaRua7" type="Node3D" unique_id=372233040]
 
-[node name="TerreoEstrutura" type="Node3D" parent="." unique_id=434198488]
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_house")
+
+[node name="TerreoEstrutura" type="Node3D" parent="." unique_id=434198488 groups=["nav_source"]]
 
 [node name="LajeTerreo" type="CSGBox3D" parent="TerreoEstrutura" unique_id=893658140]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, -0.1, 4)
@@ -83,7 +98,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.3, 5.5)
 use_collision = true
 size = Vector3(0.2, 2.6, 5)
 
-[node name="AndarSuperiorEstrutura" type="Node3D" parent="." unique_id=715708606]
+[node name="AndarSuperiorEstrutura" type="Node3D" parent="." unique_id=715708606 groups=["nav_source"]]
 
 [node name="LajeSuperiorOeste" type="CSGBox3D" parent="AndarSuperiorEstrutura" unique_id=1906048209]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 2.8, 4)
@@ -180,12 +195,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.6, 3.3, 0.85)
 use_collision = true
 size = Vector3(0.1, 1, 1.7)
 
-[node name="Escada" type="Node3D" parent="." unique_id=838542316]
+[node name="Escada" type="Node3D" parent="." unique_id=838542316 groups=["nav_source"]]
 
 [node name="RampaColisao" type="CSGBox3D" parent="Escada" unique_id=1221663182]
 transform = Transform3D(0.8309845, 0.55629563, 0, -0.55629563, 0.8309845, 0, 0, 0, 1, 8.175, 1.42, 0.85)
 use_collision = true
-size = Vector3(5.36, 0.2, 1.5)
+size = Vector3(5.36, 0.2, 3.0)
 material = SubResource("Material_GreenGhost")
 
 [node name="Degrau01" type="CSGBox3D" parent="Escada" unique_id=1577581905]
@@ -315,3 +330,15 @@ spawn_path = NodePath("../Players")
 script = ExtResource("1_gdmgr")
 
 [node name="DebugOverlay" parent="." unique_id=247825045 instance=ExtResource("2_dbgov")]
+
+[node name="Items" type="Node3D" parent="." unique_id=1735499055]
+
+[node name="ItemSpawner" type="MultiplayerSpawner" parent="Items" unique_id=995935073]
+_spawnable_scenes = PackedStringArray("uid://cwukjjf8ti6ea")
+spawn_path = NodePath("..")
+
+[node name="Humans" type="Node3D" parent="."]
+
+[node name="HumanSpawner" type="MultiplayerSpawner" parent="Humans"]
+_spawnable_scenes = PackedStringArray("res://scenes/characters/human_npc.tscn")
+spawn_path = NodePath("..")
