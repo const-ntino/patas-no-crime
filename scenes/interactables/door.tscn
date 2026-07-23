@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://4tuj55gocnec"]
 
 [ext_resource type="Script" uid="uid://d2552dhp3fiwq" path="res://scripts/interactables/door.gd" id="1_door"]
+[ext_resource type="Script" path="res://scripts/scouting/markable.gd" id="2_markable"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_interact"]
 size = Vector3(1.4, 2.2, 1.2)
@@ -23,3 +24,8 @@ collision_mask = 0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractZone" unique_id=1310040563]
 shape = SubResource("BoxShape3D_interact")
+
+[node name="Markable" type="Node" parent="."]
+script = ExtResource("2_markable")
+requires_flying = true
+sight_offset = Vector3(0, 2.5, 0)
