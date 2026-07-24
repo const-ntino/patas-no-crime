@@ -21,20 +21,36 @@ const ROUTINE_LINE_COLOR := Color(1, 0.85, 0.2, 0.7)
 const COUNTDOWN_COLOR := Color(1, 1, 1, 1)
 const ALERT_ICON_COLOR := Color(1, 0.9, 0.1, 1)
 const CAOS_ICON_COLOR := Color(1, 0.2, 0.2, 1)
+const HUD_TEXT_COLOR := Color(1, 1, 1, 1)
+const OBJECTIVE_DIM_COLOR := Color(0.4, 0.4, 0.4, 1)
+const OBJECTIVES: Array[Dictionary] = [
+	{ "id": &"car_key", "label": "CHAVE", "color": Color(0.95, 0.9, 0.3, 1) },
+	{ "id": &"remote", "label": "CONTROLE", "color": Color(0.3, 0.75, 0.95, 1) },
+	{ "id": &"food_pot", "label": "POTE", "color": Color(0.95, 0.4, 0.2, 1) },
+]
+
+enum MatchState { SETUP, ACTIVE, VICTORY, DEFEAT }
 
 @onready var players: Node3D = $"../../Players"
 @onready var humans: Node3D = $"../../Humans"
 @onready var dogs: Node3D = $"../../Dogs"
 
 var _camera: Camera3D = null
+var _match_time_remaining: float = 0.0
+var _match_state: MatchState = MatchState.SETUP
+var _score: int = 0
+var _delivered_objectives: Dictionary[StringName, bool] = {}
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_connect_match_manager.call_deferred()
 
 
 func _process(_delta: float) -> void:
+	if _match_state == MatchState.ACTIVE:
+		_match_time_remaining = maxf(0.0, _match_time_remaining - _delta)
 	queue_redraw()
 
 
@@ -47,6 +63,51 @@ func _draw() -> void:
 	_draw_marked_targets()
 	_draw_human_alert_icons()
 	_draw_dog_alert_icons()
+	_draw_match_hud()
+
+
+func _connect_match_manager() -> void:
+	var manager: Node = get_tree().get_first_node_in_group("game_manager")
+	if manager == null:
+		return
+	manager.match_state_changed.connect(_on_match_state_changed)
+	_on_match_state_changed(manager.match_time_remaining, manager._objective_ids(), manager.match_state, manager.score)
+
+
+func _on_match_state_changed(time_remaining: float, delivered_ids: Array[StringName], new_match_state: int, new_score: int) -> void:
+	_match_time_remaining = time_remaining
+	_match_state = new_match_state
+	_score = new_score
+	_delivered_objectives.clear()
+	for objective_id in delivered_ids:
+		_delivered_objectives[objective_id] = true
+
+
+func _draw_match_hud() -> void:
+	if _match_state == MatchState.SETUP:
+		return
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var seconds: int = int(ceil(_match_time_remaining))
+	var timer_text: String = "%02d:%02d" % [seconds / 60, seconds % 60]
+	draw_string(ThemeDB.fallback_font, Vector2(viewport_size.x * 0.5 - 30, 34), timer_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, HUD_TEXT_COLOR)
+
+	var start_x: float = viewport_size.x - 160.0
+	for i in OBJECTIVES.size():
+		var objective: Dictionary = OBJECTIVES[i]
+		var objective_id: StringName = objective["id"]
+		var delivered: bool = _delivered_objectives.get(objective_id, false)
+		var color: Color = objective["color"] if delivered else OBJECTIVE_DIM_COLOR
+		var y: float = 28.0 + i * 28.0
+		draw_circle(Vector2(start_x, y - 7.0), 6.0, color)
+		draw_string(ThemeDB.fallback_font, Vector2(start_x + 14.0, y), objective["label"], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, color)
+
+	if _match_state == MatchState.ACTIVE:
+		return
+	var headline: String = "VITORIA" if _match_state == MatchState.VICTORY else "TEMPO ESGOTADO"
+	var color: Color = Color(0.35, 0.9, 0.45, 1) if _match_state == MatchState.VICTORY else CAOS_ICON_COLOR
+	var position: Vector2 = Vector2(viewport_size.x * 0.5 - 105.0, viewport_size.y * 0.45)
+	draw_string(ThemeDB.fallback_font, position, headline, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, color)
+	draw_string(ThemeDB.fallback_font, position + Vector2(30.0, 30.0), "%d PTS" % _score, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, HUD_TEXT_COLOR)
 
 
 func _draw_companion_outlines() -> void:

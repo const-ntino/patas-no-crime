@@ -22,6 +22,11 @@ var is_captured: bool = false
 ## da captura (permanente até o resgate da sessão 9).
 var is_pinned: bool = false
 
+## A fase acabou por vitória ou tempo esgotado. Como o host já é a
+## autoridade do corpo, basta travar a simulação nele; o transform final
+## continua chegando aos clientes pelo TransformSync existente.
+var is_match_finished: bool = false
+
 ## Chamar (GDD 3.2, RF-09, sessão 7): cooldown contado só no host, que
 ## é sempre quem valida e processa o pedido (mesma razão de is_captured
 ## não precisar de RPC pra decrementar — só importa aqui).
@@ -52,7 +57,7 @@ func _physics_process(delta: float) -> void:
 	if call_cooldown_remaining > 0.0:
 		call_cooldown_remaining -= delta
 
-	if is_captured or is_pinned:
+	if is_captured or is_pinned or is_match_finished:
 		velocity.x = 0.0
 		velocity.z = 0.0
 		if not is_on_floor():

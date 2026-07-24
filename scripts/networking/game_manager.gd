@@ -19,6 +19,12 @@ const ItemScene := preload("res://scenes/interactables/item.tscn")
 const HumanScene := preload("res://scenes/characters/human_npc.tscn")
 const DogScene := preload("res://scenes/characters/dog_npc.tscn")
 
+signal match_state_changed(time_remaining: float, delivered_ids: Array[StringName], match_state: int, score: int)
+
+enum MatchState { SETUP, ACTIVE, VICTORY, DEFEAT }
+
+const MATCH_DURATION: float = 12.0 * 60.0
+
 ## Casa redimensionada 2x na sessão 10 do M1 (a estrutura do greybox
 ## ganhou scale = Vector3(2,2,2) nos 4 contêineres Node3D). Todos os
 ## pontos deste arquivo têm coordenadas em metros do mundo, que foram
@@ -103,21 +109,26 @@ const FOOD_ITEM_POS: Vector3 = Vector3(7.0, 1.0, 5.5)
 
 var match_seed: int = 0
 var delivered_objectives: Dictionary[StringName, bool] = {}
+var match_state: MatchState = MatchState.SETUP
+var match_time_remaining: float = MATCH_DURATION
+var score: int = 0
+var capture_count: int = 0
+var _last_broadcast_second: int = -1
 
 
 func _ready() -> void:
+	add_to_group("game_manager")
 	spawner.spawn_function = _spawn_character
 	# ItemSpawner NÃO usa spawn_function: itens entram por add_child em
 	# Items e o spawner (observando Items via Spawn Path) replica sozinho.
 
-	if not multiplayer.is_server():
-		return
-
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-
-	# Adiado: roda depois que TODOS os nós da cena completaram _ready.
-	_server_start.call_deferred()
+	if multiplayer.is_server():
+		multiplayer.peer_connected.connect(_on_peer_connected)
+		multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+		# Adiado: roda depois que TODOS os nós da cena completaram _ready.
+		_server_start.call_deferred()
+	else:
+		multiplayer.connected_to_server.connect(_request_match_state)
 
 
 func _server_start() -> void:
@@ -139,10 +150,27 @@ func _server_start() -> void:
 	_spawn_food_item()
 	_spawn_human()
 	_spawn_dog()
+	var cage: Cage = get_tree().get_first_node_in_group("cage") as Cage
+	if cage:
+		cage.animal_captured.connect(_on_animal_captured)
+	_start_match()
+
+
+func _physics_process(delta: float) -> void:
+	if not multiplayer.is_server() or match_state != MatchState.ACTIVE:
+		return
+	match_time_remaining = maxf(0.0, match_time_remaining - delta)
+	var whole_seconds: int = int(ceil(match_time_remaining))
+	if whole_seconds != _last_broadcast_second:
+		_last_broadcast_second = whole_seconds
+		_broadcast_match_state()
+	if match_time_remaining <= 0.0:
+		_finish_match(MatchState.DEFEAT)
 
 
 func _on_peer_connected(peer_id: int) -> void:
 	_spawn_for_peer(peer_id)
+	_send_match_state_to_peer.call_deferred(peer_id)
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
@@ -196,7 +224,7 @@ func _spawn_objectives() -> void:
 ## replicado para os peers nesta sessão; a tabela local prepara a Sessão 11
 ## para consultar progresso/vitória sem inferir pela física do item.
 func deliver_objective(item: Item, _carrier: CharacterBody3D) -> void:
-	if not multiplayer.is_server() or item.objective_id.is_empty():
+	if not multiplayer.is_server() or match_state != MatchState.ACTIVE or item.objective_id.is_empty():
 		return
 	if delivered_objectives.get(item.objective_id, false):
 		return
@@ -204,6 +232,75 @@ func deliver_objective(item: Item, _carrier: CharacterBody3D) -> void:
 	item._apply_delivered.rpc()
 	item.queue_free()
 	print("Objetivo entregue: %s" % item.objective_id)
+	if delivered_objectives.size() == OBJECTIVES.size():
+		_finish_match(MatchState.VICTORY)
+	else:
+		_broadcast_match_state()
+
+
+func _start_match() -> void:
+	match_state = MatchState.ACTIVE
+	match_time_remaining = MATCH_DURATION
+	_last_broadcast_second = int(MATCH_DURATION)
+	_broadcast_match_state()
+
+
+func _finish_match(outcome: MatchState) -> void:
+	if match_state != MatchState.ACTIVE:
+		return
+	match_state = outcome
+	score = delivered_objectives.size() * 1000
+	if outcome == MatchState.VICTORY:
+		var elapsed: float = MATCH_DURATION - match_time_remaining
+		if elapsed < 8.0 * 60.0:
+			score += 1000  # Relâmpago (GDD 7.1)
+		if capture_count == 0:
+			score += 500  # Sem capturas (GDD 7.1)
+	for player in players.get_children():
+		if player is CharacterBody3D:
+			player.is_match_finished = true
+	_broadcast_match_state()
+
+
+func _on_animal_captured(_animal: CharacterBody3D) -> void:
+	if match_state == MatchState.ACTIVE:
+		capture_count += 1
+
+
+func _objective_ids() -> Array[StringName]:
+	var ids: Array[StringName] = []
+	for objective_id in delivered_objectives:
+		ids.append(objective_id)
+	return ids
+
+
+func _broadcast_match_state() -> void:
+	_apply_match_state.rpc(match_time_remaining, _objective_ids(), match_state, score)
+
+
+func _send_match_state_to_peer(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	_apply_match_state.rpc_id(peer_id, match_time_remaining, _objective_ids(), match_state, score)
+
+
+func _request_match_state() -> void:
+	_request_match_state_rpc.rpc_id(1)
+
+
+@rpc("any_peer", "reliable")
+func _request_match_state_rpc() -> void:
+	if not multiplayer.is_server():
+		return
+	_send_match_state_to_peer(multiplayer.get_remote_sender_id())
+
+
+@rpc("authority", "call_local", "reliable")
+func _apply_match_state(time_remaining: float, delivered_ids: Array[StringName], new_match_state: int, new_score: int) -> void:
+	match_time_remaining = time_remaining
+	match_state = new_match_state
+	score = new_score
+	match_state_changed.emit(match_time_remaining, delivered_ids, match_state, score)
 
 
 ## Só o host cria o humano. Autoridade sempre do host (RM-03: toda IA

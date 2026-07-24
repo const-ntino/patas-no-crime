@@ -1,6 +1,8 @@
 extends Area3D
 class_name Cage
 
+signal animal_captured(animal: CharacterBody3D)
+
 ## Gaiola de captura (GDD 5.7, RF-04, sessão 9) — substitui o
 ## placeholder "congela no lugar" da sessão 5 (is_captured continua
 ## existindo, mas agora tem efeito real: teleporta pra cá em vez de só
@@ -72,6 +74,7 @@ func capture(animal: CharacterBody3D) -> void:
 	animal.is_captured = true
 	var offset: Vector3 = Vector3(captured_animals.size() * 0.4, 0, 0)
 	animal.global_position = global_position + offset
+	animal_captured.emit(animal)
 
 
 func _release_all() -> void:

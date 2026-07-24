@@ -49,7 +49,7 @@ reordenar sem perguntar). Progresso:
 | 8 | Pets (GDD 5.6) | concluída |
 | 9 | Captura e resgate (GDD 5.7, RF-04) | concluída |
 | 10 | Os 3 objetivos da fase MVP (GDD 6.3) + revisão das proporções do greybox | concluída |
-| 11 | Vitória, derrota, pontuação, HUD (RF-07, GDD 7.1, HUD 8.1 completo) | não iniciada |
+| 11 | Vitória, derrota, pontuação, HUD (RF-07, GDD 7.1, HUD 8.1 completo) | concluída |
 
 Gate de saída do M1: **G1** (PRD seção 8) — 3 sessões de playtest,
 riso não roteirizado em pelo menos 2, conclusão entre 40-70%.
@@ -451,10 +451,20 @@ em `GameManager.delivered_objectives`, limpa a referência de carga e
 remove o item via `MultiplayerSpawner`. Smoke test host e probe de duas
 instâncias confirmaram navegação, entrega e a replicação dos spawns.
 
-**Próximo passo: Sessão 11** — vitória, derrota, pontuação e HUD final
-(RF-07, GDD 7.1 e HUD 8.1 completo). Ela deve consumir
-`delivered_objectives` como fonte autoritativa para a condição de
-vitória, sem voltar a inferir progresso pela física dos itens.
+**Sessão 11 foi concluída.** `GameManager` mantém o timer autoritativo
+de 12 minutos, transmite snapshots por RPC para o HUD e encerra por
+vitória quando os três IDs em `delivered_objectives` foram confirmados
+ou por derrota apenas quando o tempo chega a zero. A pontuação básica
+é 1000 por objetivo, mais Relâmpago (+1000, vitória antes de 8 min) e
+Sem capturas (+500). No encerramento, o host interrompe a simulação dos
+personagens e o HUD mostra o resultado e os pontos.
+
+**Próximo passo: gate G1 do M1.** Antes de avançar para M2, executar
+três sessões de playtest com duplas distintas e registrar riso não
+roteirizado e taxa de conclusão (meta: 40-70%). Validar também no G1
+se marcação + contornos bastam para leitura em terceira pessoa sem
+minimapa (GDD 12.6), e observar se o cachorro precisa de tuning após o
+contra-jogo de comida implementado.
 
 HUD 8.1 segue parcial: sem timer de partida nem ícones dos 3
 objetivos cinza→colorido (dependem de vitória/derrota da sessão 11 e
