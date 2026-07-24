@@ -114,15 +114,19 @@ func _process_patrolling(delta: float) -> void:
 
 	var bribe: Item = _find_nearby_bribe()
 	if bribe:
-		state = State.BRIBED
-		bribe_timer = BRIBE_DURATION
-		velocity.x = 0.0
-		velocity.z = 0.0
+		_accept_bribe(bribe)
 
 
 func _process_pinning() -> void:
 	velocity.x = 0.0
 	velocity.z = 0.0
+	# GDD 5.6: comida é o contra-jogo do acuo, não só da patrulha.
+	# Outro jogador pode largar o biscoito para soltar quem está preso
+	# antes que o humano alcance o animal.
+	var bribe: Item = _find_nearby_bribe()
+	if bribe:
+		_accept_bribe(bribe)
+		return
 	if _pinned_target == null or not is_instance_valid(_pinned_target):
 		_unpin()
 		return
@@ -156,6 +160,17 @@ func _unpin() -> void:
 	_pinned_target = null
 	state = State.PATROLLING
 	patrol_timer = PATROL_TIME
+
+
+## Só o host chama. O MultiplayerSpawner replica a remoção do biscoito,
+## enquanto DogNPC.state já replica o período em que o cachorro se ocupa.
+func _accept_bribe(bribe: Item) -> void:
+	_unpin()
+	state = State.BRIBED
+	bribe_timer = BRIBE_DURATION
+	velocity.x = 0.0
+	velocity.z = 0.0
+	bribe.queue_free()
 
 
 ## Detecção por proximidade (não cone): raio + raycast (bloqueado por

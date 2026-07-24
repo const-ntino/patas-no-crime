@@ -12,7 +12,12 @@ var is_server: bool = false
 
 
 func _ready() -> void:
-	if "--server" in OS.get_cmdline_args():
+	# O CLI coloca argumentos depois de `--` em get_cmdline_user_args(),
+	# enquanto Customize Run Instances do editor os entrega em
+	# get_cmdline_args(). Aceitamos os dois caminhos para o host sempre
+	# nascer corretamente no modo de teste padrão do projeto.
+	var args: PackedStringArray = OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	if "--server" in args:
 		create_server()
 	else:
 		create_client()

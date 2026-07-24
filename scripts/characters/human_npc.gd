@@ -76,6 +76,12 @@ var _move_direction: Vector3 = Vector3.ZERO
 var _last_next_point: Vector3 = Vector3.INF
 
 var _sight_timer: float = 0.0
+## Verdadeiro enquanto acumula os 2s de visão central (GDD 5.4) — o
+## humano ainda está tecnicamente Calmo nesse intervalo, mas precisa
+## de um aviso visual (achado ao vivo: sem isso o jogador não tem
+## nenhum sinal antes do Caos "aparecer do nada" quando visto de
+## frente). HUD mostra "?" enquanto isso for true.
+var is_sighting: bool = false
 
 var _investigate_point: Vector3 = Vector3.ZERO
 var _investigate_timer: float = 0.0
@@ -208,22 +214,27 @@ func _scan_and_react(delta: float) -> void:
 	var sighting: Dictionary = _detect_best_sighting(RANGE_CALMO, ANGLE_CALMO)
 	if sighting.is_empty():
 		_sight_timer = 0.0
+		is_sighting = false
 		var noise_origin: Vector3 = _detect_noise()
 		if noise_origin != Vector3.INF:
 			_enter_desconfiado(noise_origin)
 		return
 
 	if sighting["carrying"]:
+		is_sighting = false
 		_enter_caos(sighting["player"])
 		return
 
 	if sighting["central"]:
+		is_sighting = true
 		_sight_timer += delta
 		if _sight_timer >= CAOS_CONFIRM_TIME:
+			is_sighting = false
 			_enter_caos(sighting["player"])
 		return
 
 	_sight_timer = 0.0
+	is_sighting = false
 	_enter_desconfiado(sighting["player"].global_position)
 
 
@@ -503,6 +514,7 @@ func _wake_nearby_dogs() -> void:
 func _exit_alert_to_routine() -> void:
 	alert_state = AlertState.CALMO
 	_sight_timer = 0.0
+	is_sighting = false
 	is_curious = false  # um alerta de verdade cancela curiosidade pendente
 	velocity.x = 0.0
 	velocity.z = 0.0

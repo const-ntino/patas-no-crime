@@ -48,7 +48,7 @@ reordenar sem perguntar). Progresso:
 | 7 | Chamar do pássaro (GDD 3.2, RF-09) | concluída |
 | 8 | Pets (GDD 5.6) | concluída |
 | 9 | Captura e resgate (GDD 5.7, RF-04) | concluída |
-| 10 | Os 3 objetivos da fase MVP (GDD 6.3) — revisitar proporções do greybox aqui | próxima (precisa de você — ver seção 10) |
+| 10 | Os 3 objetivos da fase MVP (GDD 6.3) + revisão das proporções do greybox | concluída |
 | 11 | Vitória, derrota, pontuação, HUD (RF-07, GDD 7.1, HUD 8.1 completo) | não iniciada |
 
 Gate de saída do M1: **G1** (PRD seção 8) — 3 sessões de playtest,
@@ -262,6 +262,30 @@ frame ANTERIOR (`_last_velocity`) e comparar essa contra o limiar
 dentro do handler — usado pro ruído de impacto de item (GDD 5.5,
 sessão 6).
 
+**q) Todo item nasce ~1m acima do chão e cai até assentar — essa queda
+sozinha já passa do limiar de ruído de impacto (sessão 6), deixando
+qualquer humano por perto Desconfiado desde o segundo 0 da partida,
+sem o jogador ter feito nada.** Achado JOGANDO DE VERDADE (sessão 9),
+não só via CLI — na sessão 6 esse mesmo sintoma já tinha aparecido nos
+meus testes headless como "ruído durante o aquecimento da cena", mas
+eu tratei como maquiagem do script de teste (dei mais tempo de
+aquecimento e segui em frente) em vez de reconhecer que o MESMO
+assentamento acontece toda partida de verdade — o CLI mostrou o
+sintoma certo, eu só errei o diagnóstico da causa. Corrigido com um
+tempo de assentamento (1.5s) antes de `item.gd` ligar o monitor de
+contato. Lição maior: quando um "artefato de teste" se repete de forma
+consistente, vale perguntar se ele não é sintoma de um bug de verdade
+antes de só ajustar o teste pra contornar.
+
+**r) "Ver claramente" no cone central (GDD 5.4) tecnicamente continua
+Calmo durante os 2s de confirmação — sem um campo à parte, o jogador
+não tem NENHUM aviso visual antes do "!" aparecer do nada.** Achado ao
+vivo (sessão 9): o ícone de estado só olhava pra `alert_state`, que só
+muda depois que os 2s já passaram. Corrigido com `is_sighting: bool`
+(replicado), ligado durante o acúmulo do avistamento central e
+desligado assim que confirma Caos (ou assim que o avistamento some) —
+o HUD mostra `?` nesse intervalo mesmo com `alert_state` ainda Calmo.
+
 ## 6. Sobre a correção de câmera (fora do plano original)
 
 Depois da sessão 2 do M1, o usuário reportou que a câmera do cliente
@@ -413,16 +437,24 @@ foi testada ao vivo com duas instâncias ainda** — isso é o primeiro
 passo antes de continuar, não pule pra sessão 10 sem confirmar essas
 três primeiro.
 
-**Sessão 10 (os 3 objetivos + revisitar proporções do greybox) NÃO foi
-iniciada de propósito — precisa de você presente.** Duas razões:
-1. Ela explicitamente inclui "revisitar proporções do greybox", e
-   numa conversa anterior você pediu pra aumentar o ambiente inteiro
-   (escada, pé-direito, cômodos) em vez de só a colisão pontual da
-   rampa — combinamos de deixar essa decisão de escopo/dimensões pra
-   quando a sessão 10 chegasse, com você por perto.
-2. É a sessão de maior risco geométrico do M1 inteiro (mexe em
-   paredes/lajes/escada que já existem e funcionam) — não é o tipo de
-   coisa pra fazer sem poder testar ao vivo em seguida.
+**Sessão 10 foi concluída.** A Casa da Rua 7 foi redimensionada 2x de
+forma coerente (térreo, andar superior, escada e exterior), com todos
+os pontos de spawn, rotina, pet, gaiola, toca e interações reposicionados
+nas novas coordenadas. A navegação continua assada no host depois de 10
+frames físicos e foi validada tanto na rota sala-cozinha quanto na rota
+sala-banheiro pela escada.
+
+Os objetivos formais são `car_key` (Leve, ancorada no gancho alto do
+hall), `remote` (Médio, sala) e `food_pot` (Pesado, cozinha). A
+`DeliveryZone` da toca confirma a entrega apenas no host, registra o id
+em `GameManager.delivered_objectives`, limpa a referência de carga e
+remove o item via `MultiplayerSpawner`. Smoke test host e probe de duas
+instâncias confirmaram navegação, entrega e a replicação dos spawns.
+
+**Próximo passo: Sessão 11** — vitória, derrota, pontuação e HUD final
+(RF-07, GDD 7.1 e HUD 8.1 completo). Ela deve consumir
+`delivered_objectives` como fonte autoritativa para a condição de
+vitória, sem voltar a inferir progresso pela física dos itens.
 
 HUD 8.1 segue parcial: sem timer de partida nem ícones dos 3
 objetivos cinza→colorido (dependem de vitória/derrota da sessão 11 e

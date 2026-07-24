@@ -24,6 +24,7 @@ const CAOS_ICON_COLOR := Color(1, 0.2, 0.2, 1)
 
 @onready var players: Node3D = $"../../Players"
 @onready var humans: Node3D = $"../../Humans"
+@onready var dogs: Node3D = $"../../Dogs"
 
 var _camera: Camera3D = null
 
@@ -45,6 +46,7 @@ func _draw() -> void:
 	_draw_companion_outlines()
 	_draw_marked_targets()
 	_draw_human_alert_icons()
+	_draw_dog_alert_icons()
 
 
 func _draw_companion_outlines() -> void:
@@ -103,18 +105,39 @@ func _draw_human_extras(human: HumanNPC, head_point: Vector2) -> void:
 ## Ícone de estado (?, !) sobre QUALQUER humano em Desconfiado/Caos —
 ## GDD 8.1 não condiciona isso a estar marcado, diferente do ícone de
 ## marcação (que existe pra dar informação através de parede).
+##
+## is_sighting cobre um caso que tecnicamente ainda é Calmo: os 2s de
+## visão central (GDD 5.4) antes de confirmar Caos. Sem aviso nesse
+## intervalo, o "!" parecia aparecer do nada quando o humano via o
+## jogador de frente — achado ao vivo, sessão 9. Mostra "?" nesse
+## intervalo mesmo sem o estado interno ter mudado ainda.
 func _draw_human_alert_icons() -> void:
 	for human in humans.get_children():
 		if human.name == "HumanSpawner" or not human is HumanNPC:
 			continue
-		if human.alert_state == HumanNPC.AlertState.CALMO:
+		if human.alert_state == HumanNPC.AlertState.CALMO and not human.is_sighting:
 			continue
 		var point: Vector2 = _project(human.global_position + Vector3(0, 1.3, 0))
 		if point == Vector2.INF:
 			continue
-		var label: String = "?" if human.alert_state == HumanNPC.AlertState.DESCONFIADO else "!"
-		var color: Color = ALERT_ICON_COLOR if human.alert_state == HumanNPC.AlertState.DESCONFIADO else CAOS_ICON_COLOR
+		var label: String = "!" if human.alert_state == HumanNPC.AlertState.CAOS else "?"
+		var color: Color = CAOS_ICON_COLOR if human.alert_state == HumanNPC.AlertState.CAOS else ALERT_ICON_COLOR
 		draw_string(ThemeDB.fallback_font, point + Vector2(-4, -24), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, color)
+
+
+## O cachorro prende temporariamente o animal quando entra em PINNING
+## (GDD 5.6). Como DogNPC.state já é sincronizado, o aviso chega aos
+## dois peers sem incluir flags de controle no TransformSync do jogador.
+func _draw_dog_alert_icons() -> void:
+	for dog in dogs.get_children():
+		if dog.name == "DogSpawner" or not dog is DogNPC:
+			continue
+		if dog.state != DogNPC.State.PINNING:
+			continue
+		var point: Vector2 = _project(dog.global_position + Vector3(0, 0.9, 0))
+		if point == Vector2.INF:
+			continue
+		draw_string(ThemeDB.fallback_font, point + Vector2(-4, -24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, CAOS_ICON_COLOR)
 
 
 ## Retorna Vector2.INF se o ponto está atrás da câmera (não faz sentido

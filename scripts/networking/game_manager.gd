@@ -19,11 +19,18 @@ const ItemScene := preload("res://scenes/interactables/item.tscn")
 const HumanScene := preload("res://scenes/characters/human_npc.tscn")
 const DogScene := preload("res://scenes/characters/dog_npc.tscn")
 
+## Casa redimensionada 2x na sessão 10 do M1 (a estrutura do greybox
+## ganhou scale = Vector3(2,2,2) nos 4 contêineres Node3D). Todos os
+## pontos deste arquivo têm coordenadas em metros do mundo, que foram
+## afinadas pra casa 1x — então cada Vector3 aqui foi multiplicado por 2
+## pra continuar caindo no mesmo cômodo da casa 2x. Personagens, cápsulas
+## e a malha de navegação (agent_radius etc.) NÃO escalaram: descrevem o
+## corpo/os sentidos do animal, não o tamanho da casa.
 const SPAWN_POINTS: Array[Vector3] = [
-	Vector3(1.3, 1, -1),
-	Vector3(2.7, 1, -1),
-	Vector3(1.3, 1, -0.3),
-	Vector3(2.7, 1, -0.3),
+	Vector3(2.6, 2, -2),
+	Vector3(5.4, 2, -2),
+	Vector3(2.6, 2, -0.6),
+	Vector3(5.4, 2, -0.6),
 ]
 
 const PLAYER_COLORS: Array[Color] = [
@@ -38,13 +45,26 @@ const STATS: Array[CharacterStats] = [
 	preload("res://resources/characters/bird_stats.tres"),
 ]
 
-## Itens de teste: posição + classe (0=Leve, 1=Médio, 2=Pesado,
-## 3=Fixo-arrastável). Ajuste as posições conforme sua cena de teste.
-const TEST_ITEMS := [
-	{ "pos": Vector3(2, 1, 2), "class": 0 },
-	{ "pos": Vector3(3, 1, 2), "class": 1 },
-	{ "pos": Vector3(4, 1, 2), "class": 2 },
-	{ "pos": Vector3(5, 1, 2), "class": 3 },
+## Os 3 objetivos da fase MVP (GDD 6.3), cada um ensinando uma mecânica.
+## class: 0=Leve, 1=Médio, 2=Pesado, 3=Fixo-arrastável (Item.Class).
+## Posições em coordenadas da casa 2x (ver nota em SPAWN_POINTS), estimadas
+## a partir da geometria das paredes dobradas — mesmo espírito de estimativa
+## da HUMAN_ROUTE: o cômodo está certo, o ponto exato pode precisar de
+## ajuste visual depois de testar ao vivo.
+##
+## 1) Chave (Leve) ALTA no hall: ensina verticalidade (só o pássaro voando
+##    alcança nesta roster do MVP). item.gd a mantém congelada no gancho até
+##    a primeira coleta; depois ela volta a obedecer física normal.
+## 2) Controle remoto (Médio) na sala, junto do sofá / ponto de rotina
+##    principal: ensina rotina, janela de tempo e esconderijo.
+## 3) Pote de comida (Pesado) na cozinha, sobre a rota de patrulha do
+##    cachorro (DOG_PATROL_POINTS): objetivo clímax, aula de coordenação
+##    total (GDD 6.3, princípio 4 de 6.1: Pesado no ponto de máxima
+##    exposição).
+const OBJECTIVES := [
+	{ "id": &"car_key", "pos": Vector3(3.0, 4.0, 3.0), "class": Item.Class.LEVE },
+	{ "id": &"remote", "pos": Vector3(10.5, 1.0, 13.0), "class": Item.Class.MEDIO },
+	{ "id": &"food_pot", "pos": Vector3(22.0, 1.0, 6.0), "class": Item.Class.PESADO },
 ]
 
 ## Rotina do humano da Casa da Rua 7 (GDD 6.2): sofá, cozinha, banheiro,
@@ -53,10 +73,10 @@ const TEST_ITEMS := [
 ## pontos é resolvido pela malha de navegação (NavigationAgent3D), só a
 ## posição de cada ponto pode precisar de ajuste visual depois de testar.
 const HUMAN_ROUTE: Array[Vector3] = [
-	Vector3(4.5, 1.0, 6.5),    # sofá (sala, térreo)
-	Vector3(12.5, 1.0, 6.5),   # cozinha (balcão, térreo)
-	Vector3(1.5, 3.8, 6.5),    # banheiro (andar superior)
-	Vector3(11.5, 3.8, 4.5),   # quarto (andar superior)
+	Vector3(9.0, 2.0, 13.0),   # sofá (sala, térreo)
+	Vector3(25.0, 2.0, 13.0),  # cozinha (balcão, térreo)
+	Vector3(3.0, 7.6, 13.0),   # banheiro (andar superior)
+	Vector3(23.0, 7.6, 9.0),   # quarto (andar superior)
 ]
 
 ## Cachorro (GDD 5.6, sessão 8): dorme na sala (GDD 6.2), patrulha 2
@@ -82,6 +102,7 @@ const FOOD_ITEM_POS: Vector3 = Vector3(7.0, 1.0, 5.5)
 @onready var nav_region: NavigationRegion3D = $"../NavigationRegion3D"
 
 var match_seed: int = 0
+var delivered_objectives: Dictionary[StringName, bool] = {}
 
 
 func _ready() -> void:
@@ -114,7 +135,7 @@ func _server_start() -> void:
 	nav_region.bake_navigation_mesh(false)  # síncrono: precisa terminar antes do humano andar
 
 	_spawn_for_peer(1)  # o próprio host também tem um personagem
-	_spawn_test_items()
+	_spawn_objectives()
 	_spawn_food_item()
 	_spawn_human()
 	_spawn_dog()
@@ -160,17 +181,29 @@ func _spawn_character(peer_id: int) -> Node:
 	return character
 
 
-## Só o host cria itens. setup() define a classe ANTES do add_child,
-## então ela já viaja no spawn replicado; a posição contínua fica por
-## conta do ItemSync de cada item.
-func _spawn_test_items() -> void:
-	for i in TEST_ITEMS.size():
-		var data: Dictionary = TEST_ITEMS[i]
+## Só o host cria objetivos. setup() define sua classe e identidade ANTES
+## de add_child; ItemSpawner replica a criação e a remoção para clientes.
+func _spawn_objectives() -> void:
+	for data: Dictionary in OBJECTIVES:
 		var item := ItemScene.instantiate()
-		item.name = "item_%d" % i
+		item.name = "objective_%s" % String(data["id"])
 		item.position = data["pos"]
-		item.setup(data["class"])
+		item.setup(data["class"], data["id"])
 		items.add_child(item)
+
+
+## Chamado pela DeliveryZone somente no host. A remoção do nó é o estado
+## replicado para os peers nesta sessão; a tabela local prepara a Sessão 11
+## para consultar progresso/vitória sem inferir pela física do item.
+func deliver_objective(item: Item, _carrier: CharacterBody3D) -> void:
+	if not multiplayer.is_server() or item.objective_id.is_empty():
+		return
+	if delivered_objectives.get(item.objective_id, false):
+		return
+	delivered_objectives[item.objective_id] = true
+	item._apply_delivered.rpc()
+	item.queue_free()
+	print("Objetivo entregue: %s" % item.objective_id)
 
 
 ## Só o host cria o humano. Autoridade sempre do host (RM-03: toda IA

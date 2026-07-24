@@ -10,6 +10,9 @@ enum Class { LEVE, MEDIO, PESADO, FIXO_ARRASTAVEL }
 
 @export var item_class: Class = Class.LEVE
 @export var speed_multiplier: float = 1.0
+## Vazio para itens comuns. Objetivos são identificados pelo host; o nome
+## do nó continua sendo a identidade visual replicada para os clientes.
+var objective_id: StringName = &""
 ## Suborno de cachorro (GDD 5.6, sessão 8): largar um item com essa
 ## flag perto de um cachorro acordado o ocupa por um tempo.
 @export var is_food: bool = false
@@ -36,6 +39,7 @@ var _impact_noise_cooldown: float = 0.0
 ## velocidade do início do frame anterior pra medir o impacto de
 ## verdade (achado via CLI headless, sessão 6).
 var _last_velocity: Vector3 = Vector3.ZERO
+var _is_anchored: bool = false
 
 @onready var mesh: MeshInstance3D = $Mesh
 
@@ -55,6 +59,12 @@ const CLASS_SPEED := {
 
 
 func _ready() -> void:
+	# A chave é o único objetivo inicialmente preso ao gancho. O nome do nó
+	# viaja no spawn replicado, então cada peer pode congelá-la sem adicionar
+	# uma propriedade nova ao ItemSync só para este estado inicial estático.
+	if name == "objective_car_key":
+		_is_anchored = true
+		freeze = true
 	_refresh_visual()
 	# Cliente: item_class chega pela rede depois do _ready; quando o
 	# synchronizer entregar dados, reaplica a cor se a classe mudou.
@@ -67,8 +77,21 @@ func _ready() -> void:
 	# peer roda física local do RigidBody3D, mas só a simulação do host
 	# é autoritativa (RM-02); processar dos dois lados duplicaria/
 	# dessincronizaria o ruído.
-	contact_monitor = true
+	#
+	# ACHADO AO VIVO (sessão 9, jogando de verdade): todo item nasce a
+	# ~1m do chão e cai até assentar — essa queda de spawn sozinha já
+	# passa do limiar de ruído de impacto, deixando qualquer humano
+	# perto Desconfiado desde o segundo 0 da partida, sem o jogador ter
+	# feito nada. Na sessão 6 isso já tinha aparecido como "ruído
+	# durante o aquecimento" nos meus próprios testes de CLI, mas eu
+	# tratei como maquiagem do script de teste em vez de reconhecer que
+	# o MESMO assentamento acontece toda partida de verdade. Corrigido
+	# esperando um tempo de assentamento antes de ligar o monitor de
+	# contato — nenhuma queda de spawn deveria durar mais que isso.
+	contact_monitor = false
 	max_contacts_reported = 4
+	await get_tree().create_timer(1.5).timeout
+	contact_monitor = true
 	body_entered.connect(_on_body_entered)
 
 
@@ -151,6 +174,7 @@ func _request_attach_rpc(requester_path: NodePath) -> void:
 @rpc("call_local")
 func _apply_attach(requester_path: NodePath) -> void:
 	held_by = get_node(requester_path)
+	_is_anchored = false
 	freeze = true
 	if item_class == Class.FIXO_ARRASTAVEL:
 		held_by.dragging_item = self
@@ -178,8 +202,20 @@ func _apply_release() -> void:
 	freeze = false
 
 
+## Chamado somente pelo host depois que DeliveryZone confirmou a entrega.
+## call_local limpa a referência de carga em todos os peers antes de o
+## MultiplayerSpawner replicar a remoção definitiva do item.
+@rpc("authority", "call_local", "reliable")
+func _apply_delivered() -> void:
+	if held_by:
+		held_by.held_item = null
+		held_by.dragging_item = null
+	held_by = null
+
+
 ## Chamado pelo host no spawn, ANTES de add_child, pra classe já viajar
 ## no spawn replicado.
-func setup(new_class: Class) -> void:
+func setup(new_class: Class, new_objective_id: StringName = &"") -> void:
 	item_class = new_class
+	objective_id = new_objective_id
 	_refresh_visual()

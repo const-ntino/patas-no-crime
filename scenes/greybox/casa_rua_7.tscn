@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://yjt4t7v2s4cc"]
+[gd_scene load_steps=11 format=3 uid="uid://yjt4t7v2s4cc"]
 
 [ext_resource type="Script" uid="uid://c6bdotm7wv88q" path="res://scripts/networking/game_manager.gd" id="1_gdmgr"]
 [ext_resource type="PackedScene" uid="uid://bhxcx4domeoit" path="res://scenes/ui/debug_overlay.tscn" id="2_dbgov"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/interactables/hiding_spot.tscn" id="5_hide"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/door.tscn" id="6_door"]
 [ext_resource type="PackedScene" path="res://scenes/interactables/cage.tscn" id="7_cage"]
+[ext_resource type="Script" path="res://scripts/interactables/delivery_zone.gd" id="8_delivery"]
 
 [sub_resource type="StandardMaterial3D" id="Material_Yellow"]
 albedo_color = Color(0.9, 0.85, 0.2, 1)
@@ -40,12 +41,16 @@ agent_height = 1.8
 agent_max_climb = 0.3
 agent_max_slope = 55.0
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_delivery"]
+size = Vector3(3, 2, 3)
+
 [node name="CasaRua7" type="Node3D" unique_id=372233040]
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_house")
 
 [node name="TerreoEstrutura" type="Node3D" parent="." unique_id=434198488 groups=["nav_source"]]
+scale = Vector3(2, 2, 2)
 
 [node name="LajeTerreo" type="CSGBox3D" parent="TerreoEstrutura" unique_id=893658140]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, -0.1, 4)
@@ -104,6 +109,7 @@ use_collision = true
 size = Vector3(0.2, 2.6, 5)
 
 [node name="AndarSuperiorEstrutura" type="Node3D" parent="." unique_id=715708606 groups=["nav_source"]]
+scale = Vector3(2, 2, 2)
 
 [node name="LajeSuperiorOeste" type="CSGBox3D" parent="AndarSuperiorEstrutura" unique_id=1906048209]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 2.8, 4)
@@ -201,6 +207,7 @@ use_collision = true
 size = Vector3(0.1, 1, 1.7)
 
 [node name="Escada" type="Node3D" parent="." unique_id=838542316 groups=["nav_source"]]
+scale = Vector3(2, 2, 2)
 
 [node name="RampaColisao" type="CSGBox3D" parent="Escada" unique_id=1221663182]
 transform = Transform3D(0.8309845, 0.55629563, 0, -0.55629563, 0.8309845, 0, 0, 0, 1, 8.175, 1.42, 0.85)
@@ -289,6 +296,7 @@ size = Vector3(0.27, 3.08, 1.5)
 material = SubResource("Material_Green")
 
 [node name="Exterior" type="Node3D" parent="." unique_id=1544005739]
+scale = Vector3(2, 2, 2)
 
 [node name="ChaoExterior" type="CSGBox3D" parent="Exterior" unique_id=1821324359]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, -0.1, 3)
@@ -305,6 +313,16 @@ material = SubResource("Material_Yellow")
 [node name="Toca" type="CSGBox3D" parent="Exterior" unique_id=720604091]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.3, -1)
 size = Vector3(1, 0.6, 1)
+
+[node name="DeliveryZone" type="Area3D" parent="."]
+position = Vector3(4, 1, -2)
+collision_layer = 0
+collision_mask = 2
+monitoring = true
+script = ExtResource("8_delivery")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeliveryZone"]
+shape = SubResource("BoxShape3D_delivery")
 
 [node name="Arvore" type="CSGCylinder3D" parent="Exterior" unique_id=1543690747]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.2, 2, 4)
@@ -360,11 +378,11 @@ script = ExtResource("3_scout")
 [node name="GameHUD" parent="." instance=ExtResource("4_hud")]
 
 [node name="Sofa" parent="." instance=ExtResource("5_hide")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0.5, 6.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.0, 13)
 
 [node name="JanelaCozinha" parent="." instance=ExtResource("6_door")]
-position = Vector3(13.9, 0, 3.5)
+position = Vector3(27.8, 0, 7.0)
 rotation_degrees = Vector3(0, 90, 0)
 
 [node name="Gaiola" parent="." instance=ExtResource("7_cage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.0, 6.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0, 2.0, 12.0)
